@@ -214,7 +214,8 @@
     .tab-content.active { display: block; }
 
     /* ── Inputs & buttons ── */
-    input[type="text"] {
+    input[type="text"],
+    input[type="password"] {
       width: 100%;
       background: var(--surface2);
       border: 1px solid #333;
@@ -225,8 +226,10 @@
       outline: none;
       transition: border-color 0.15s;
     }
-    input[type="text"]:focus { border-color: var(--green); }
-    input[type="text"]::placeholder { color: var(--text-muted); }
+    input[type="text"]:focus,
+    input[type="password"]:focus { border-color: var(--green); }
+    input[type="text"]::placeholder,
+    input[type="password"]::placeholder { color: var(--text-muted); }
 
     .btn {
       display: inline-flex;
@@ -495,9 +498,7 @@
     <h2>Join the Party</h2>
     <p>Enter your name to start requesting songs.</p>
     <input type="text" id="name-input" placeholder="Your name" maxlength="32" autocomplete="off" />
-    <div id="password-wrap" style="display:none">
-      <input type="password" id="password-input" placeholder="Party password" autocomplete="off" />
-    </div>
+    <input type="password" id="password-input" placeholder="Password (if required)" autocomplete="off" />
     <button class="btn btn-primary" id="join-btn" onclick="joinParty()">Join</button>
     <p id="join-error" style="color:#e74c3c;font-size:0.85rem;display:none;"></p>
   </div>
