@@ -649,12 +649,10 @@
         body: JSON.stringify({ name, password }),
       });
       if (res.status === 403) {
-        // Wrong or missing password — show the password field
-        document.getElementById('password-wrap').style.display = 'block';
-        document.getElementById('password-input').focus();
         const el = document.getElementById('join-error');
-        el.textContent = 'This party requires a password.';
+        el.textContent = 'Incorrect password.';
         el.style.display = 'block';
+        document.getElementById('password-input').focus();
         return;
       }
       if (!res.ok) throw new Error(await res.text());
@@ -686,7 +684,7 @@
 
   // ── WebSocket ──────────────────────────────────────────────────────────────
   function connectWS() {
-    const wsUrl = `ws://${window.location.host}/ws`;
+    const wsUrl = `ws://${window.location.host}/ws?token=${guestToken}`;
     ws = new WebSocket(wsUrl);
 
     ws.onopen = () => setWsDot(true);
@@ -722,7 +720,7 @@
   // ── Playback ───────────────────────────────────────────────────────────────
   async function fetchPlayback() {
     try {
-      const res = await fetch(`${BASE}/api/playback`);
+      const res = await fetch(`${BASE}/api/playback?token=${guestToken}`);
       if (!res.ok) return;
       const pb = await res.json();
       applyPlayback(pb);
@@ -775,7 +773,7 @@
   // ── History ────────────────────────────────────────────────────────────────
   async function fetchHistory() {
     try {
-      const res = await fetch(`${BASE}/api/history`);
+      const res = await fetch(`${BASE}/api/history?token=${guestToken}`);
       if (!res.ok) return;
       history = await res.json();
       renderHistory();
