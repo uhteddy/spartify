@@ -78,9 +78,32 @@ pub async fn start_server(state: AppState) -> anyhow::Result<u16> {
             if let Ok(sq) = crate::spotify::api::get_spotify_queue(&access_token).await {
                 *poll_state.spotify_queue_cache.write().await = sq.clone();
                 let _ = poll_state.ws_tx.send(
-                    serde_json::json!({"type": "spotify_queue_update", "tracks": sq})
+                    serde_json::json!({"type": "spotify_queue_update", "tracks": sq.clone()})
                         .to_string(),
                 );
+
+                // Synchronize party queue order with Spotify's actual playback order.
+                // Tracks are indexed by their position in Spotify's queue; party tracks
+                // not yet visible in Spotify's queue (e.g. just pushed) sort to the end.
+                let sq_order: std::collections::HashMap<String, usize> = sq
+                    .iter()
+                    .enumerate()
+                    .map(|(i, t)| (t.id.clone(), i))
+                    .collect();
+                let order_changed = {
+                    let mut queue = poll_state.queue.write().await;
+                    let before: Vec<_> = queue.iter().map(|e| e.track.id.clone()).collect();
+                    queue.sort_by_key(|e| sq_order.get(&e.track.id).copied().unwrap_or(usize::MAX));
+                    let after: Vec<_> = queue.iter().map(|e| e.track.id.clone()).collect();
+                    before != after
+                };
+                if order_changed {
+                    let queue_snap = poll_state.queue.read().await.clone();
+                    let _ = poll_state.ws_tx.send(
+                        serde_json::json!({"type": "queue_update", "queue": queue_snap})
+                            .to_string(),
+                    );
+                }
             }
         }
     });
