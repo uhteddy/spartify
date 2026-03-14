@@ -1,74 +1,60 @@
-use tokio::io::AsyncBufReadExt;
+use tauri_plugin_shell::ShellExt;
+use tauri_plugin_shell::process::CommandEvent;
 
-/// Spawns `bore local <port> --to bore.pub` and waits for it to report
-/// the public URL. Returns (public_url, child_process).
-///
-/// Requires `bore` to be installed: `cargo install bore-cli`
+/// Spawns the bundled `bore` sidecar as `bore local <port> --to bore.pub`
+/// and waits for it to report the public URL.
+/// Returns `(public_url, child_process)`.
 pub async fn start_bore_tunnel(
+    app: &tauri::AppHandle,
     port: u16,
-) -> anyhow::Result<(String, tokio::process::Child)> {
-    let mut child = tokio::process::Command::new("bore")
+) -> anyhow::Result<(String, tauri_plugin_shell::process::CommandChild)> {
+    let (mut rx, child) = app
+        .shell()
+        .sidecar("bore")
+        .map_err(|e| anyhow::anyhow!("Failed to find bore sidecar: {}", e))?
         .args(["local", &port.to_string(), "--to", "bore.pub"])
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
         .spawn()
-        .map_err(|e| {
-            if e.kind() == std::io::ErrorKind::NotFound {
-                anyhow::anyhow!(
-                    "`bore` was not found on your PATH.\n\
-                     Install it with:  cargo install bore-cli\n\
-                     Then restart Spartify."
-                )
-            } else {
-                anyhow::anyhow!("Failed to launch bore: {}", e)
-            }
-        })?;
+        .map_err(|e| anyhow::anyhow!("Failed to launch bore: {}", e))?;
 
-    // bore writes its log lines to stderr
-    let stderr = child.stderr.take().expect("bore stderr should be piped");
-    let stdout = child.stdout.take().expect("bore stdout should be piped");
-
-    let tunnel_url = tokio::time::timeout(
+    // Wait up to 20 seconds for bore to print its "listening at bore.pub:PORT" line.
+    let url = tokio::time::timeout(
         std::time::Duration::from_secs(20),
-        wait_for_url(stderr, stdout),
+        async {
+            while let Some(event) = rx.recv().await {
+                match event {
+                    CommandEvent::Stdout(bytes) | CommandEvent::Stderr(bytes) => {
+                        let line = String::from_utf8_lossy(&bytes);
+                        if let Some(url) = parse_bore_url(&line) {
+                            // Drain remaining output in the background so bore
+                            // never blocks on a full pipe buffer.
+                            tokio::spawn(async move {
+                                while rx.recv().await.is_some() {}
+                            });
+                            return Ok(url);
+                        }
+                    }
+                    CommandEvent::Error(e) => {
+                        return Err(anyhow::anyhow!("bore error: {}", e));
+                    }
+                    CommandEvent::Terminated(s) => {
+                        return Err(anyhow::anyhow!(
+                            "bore exited early (code {:?})",
+                            s.code
+                        ));
+                    }
+                    _ => {}
+                }
+            }
+            Err(anyhow::anyhow!("bore output ended without a tunnel URL"))
+        },
     )
     .await
-    .map_err(|_| anyhow::anyhow!("Timed out waiting for bore tunnel to establish (20s)"))?
-    .map_err(|e| anyhow::anyhow!("bore error: {}", e))?;
+    .map_err(|_| anyhow::anyhow!("Timed out waiting for bore tunnel (20s)"))??;
 
-    Ok((tunnel_url, child))
+    Ok((url, child))
 }
 
-async fn wait_for_url(
-    stderr: tokio::process::ChildStderr,
-    stdout: tokio::process::ChildStdout,
-) -> anyhow::Result<String> {
-    let mut stderr_lines = tokio::io::BufReader::new(stderr).lines();
-    let mut stdout_lines = tokio::io::BufReader::new(stdout).lines();
-
-    loop {
-        tokio::select! {
-            line = stderr_lines.next_line() => {
-                if let Ok(Some(line)) = line {
-                    if let Some(url) = parse_bore_url(&line) {
-                        return Ok(url);
-                    }
-                }
-            }
-            line = stdout_lines.next_line() => {
-                if let Ok(Some(line)) = line {
-                    if let Some(url) = parse_bore_url(&line) {
-                        return Ok(url);
-                    }
-                }
-            }
-        }
-    }
-}
-
-/// Parses a line like:
-///   `... listening at bore.pub:12345`
-/// and returns `"http://bore.pub:12345"`.
+/// Parses a line like `… listening at bore.pub:12345` → `"http://bore.pub:12345"`.
 fn parse_bore_url(line: &str) -> Option<String> {
     let needle = "bore.pub:";
     let idx = line.find(needle)?;

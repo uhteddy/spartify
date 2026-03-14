@@ -47,11 +47,15 @@
   let loading = $state(false);
   let error = $state('');
   let playNextLoading = $state(false);
+  let updateVersion = $state<string | null>(null);
+  let updateInstalling = $state(false);
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
   let pollInterval: ReturnType<typeof setInterval>;
 
   onMount(async () => {
+    // Silently check for updates in the background
+    invoke<string | null>('check_for_updates').then(v => { updateVersion = v; }).catch(() => {});
     // Restore party state if already active
     const url = await invoke<string | null>('get_tunnel_url');
     if (url) {
@@ -161,7 +165,28 @@
   function copyUrl() {
     navigator.clipboard.writeText(tunnelUrl);
   }
+
+  async function installUpdate() {
+    updateInstalling = true;
+    try {
+      await invoke('install_update'); // restarts the app on success
+    } catch (e) {
+      console.error('Update failed', e);
+      updateInstalling = false;
+    }
+  }
 </script>
+
+<div class="root">
+  {#if updateVersion}
+    <div class="update-bar">
+      <span>Update available: <strong>v{updateVersion}</strong></span>
+      <button class="update-btn" onclick={installUpdate} disabled={updateInstalling}>
+        {updateInstalling ? 'Installing…' : 'Install & Restart'}
+      </button>
+      <button class="update-dismiss" onclick={() => updateVersion = null} aria-label="Dismiss">✕</button>
+    </div>
+  {/if}
 
 <div class="layout">
   <!-- ── Left panel: share + guests ── -->
@@ -312,11 +337,59 @@
     {/if}
   </main>
 </div>
+</div>
 
 <style>
+  .update-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 20px;
+    background: #1a3a28;
+    border-bottom: 1px solid #1db954;
+    font-size: 0.85rem;
+    color: #ccc;
+    flex-shrink: 0;
+  }
+
+  .update-bar span { flex: 1; }
+  .update-bar strong { color: #1db954; }
+
+  .update-btn {
+    background: #1db954;
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .update-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .update-dismiss {
+    background: none;
+    border: none;
+    color: #777;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .update-dismiss:hover { color: #fff; }
+
+  .root {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+
   .layout {
     display: flex;
-    height: 100vh;
+    flex: 1;
     overflow: hidden;
   }
 

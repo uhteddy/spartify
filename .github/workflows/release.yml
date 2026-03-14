@@ -1,0 +1,87 @@
+name: Release
+
+# Triggered by version tags: git tag v1.2.3 && git push --tags
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  release:
+    permissions:
+      contents: write   # needed to create GitHub releases and upload assets
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            target: aarch64-apple-darwin      # Apple Silicon
+          - platform: macos-latest
+            target: x86_64-apple-darwin       # Intel Mac
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu  # Linux
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc    # Windows
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Rust build artifacts
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      # WebKit and other native libs required on Linux
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Install frontend dependencies
+        run: bun install
+
+      # Build bore from source (same toolchain, always matches target)
+      # and place it where Tauri expects the sidecar binary.
+      - name: Build bore sidecar
+        shell: bash
+        run: |
+          cargo install bore-cli --locked
+          mkdir -p src-tauri/binaries
+          TARGET="${{ matrix.target }}"
+          if [[ "$TARGET" == *windows* ]]; then
+            cp "$HOME/.cargo/bin/bore.exe" "src-tauri/binaries/bore-${TARGET}.exe"
+          else
+            cp "$HOME/.cargo/bin/bore" "src-tauri/binaries/bore-${TARGET}"
+          fi
+
+      - name: Build and publish release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Generate these once with: bunx tauri signer generate -w ~/.tauri/spartify.key
+          # Add the private key and password as GitHub repository secrets.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Spartify ${{ github.ref_name }}'
+          releaseBody: 'See the assets below to download and install Spartify.'
+          releaseDraft: true    # publish manually after all platform builds finish
+          prerelease: false
+          args: --target ${{ matrix.target }}

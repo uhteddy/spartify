@@ -28,11 +28,21 @@
       "desktop": {
         "schemes": ["spartify"]
       }
+    },
+    "shell": {
+      "open": false
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDNCODk2QUMzNkE0N0I3QzUKUldURnQwZHF3MnFKTzl4aHhETzN5TFVTUS80aGFhaUV1QUNyYWN6Z1YxcVYrR1JVanpqREtwa3IK",
+      "endpoints": [
+        "https://github.com/uhteddy/spartify/releases/latest/download/latest.json"
+      ]
     }
   },
   "bundle": {
     "active": true,
     "targets": "all",
+    "externalBin": ["binaries/bore"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

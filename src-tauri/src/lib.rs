@@ -34,6 +34,8 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(app_state)
         .invoke_handler(tauri::generate_handler![
             commands::get_spotify_status,
@@ -47,6 +49,8 @@ pub fn run() {
             commands::get_playback,
             commands::get_tunnel_url,
             commands::submit_oauth_code,
+            commands::check_for_updates,
+            commands::install_update,
         ])
         .setup(|app| {
             use tauri_plugin_deep_link::DeepLinkExt;

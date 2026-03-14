@@ -36,6 +36,12 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-feature
 
 # Deep link (custom URI scheme for Spotify OAuth callback)
 tauri-plugin-deep-link = "2"
+
+# Shell / sidecar (for bundled bore binary)
+tauri-plugin-shell = "2"
+
+# Auto-updater (checks GitHub releases for new versions)
+tauri-plugin-updater = "2"
 url = "2"
 
 # Utilities

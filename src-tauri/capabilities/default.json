@@ -7,6 +7,9 @@
     "core:default",
     "opener:default",
     "opener:allow-open-url",
-    "deep-link:default"
+    "deep-link:default",
+    "shell:allow-execute",
+    "shell:allow-kill",
+    "updater:default"
   ]
 }

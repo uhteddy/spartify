@@ -84,7 +84,10 @@ pub struct StartPartyResult {
 }
 
 #[tauri::command]
-pub async fn start_party(state: tauri::State<'_, AppState>) -> Result<StartPartyResult, String> {
+pub async fn start_party(
+    app: AppHandle,
+    state: tauri::State<'_, AppState>,
+) -> Result<StartPartyResult, String> {
     if state.party_active.load(Ordering::SeqCst) {
         let url = state.tunnel_url.read().await.clone().unwrap_or_default();
         let port = state.server_port.read().await.unwrap_or(0);
@@ -105,7 +108,7 @@ pub async fn start_party(state: tauri::State<'_, AppState>) -> Result<StartParty
         .map_err(|e| e.to_string())?;
 
     // Start the bore tunnel
-    let (tunnel_url, child) = crate::tunnel::start_bore_tunnel(port)
+    let (tunnel_url, child) = crate::tunnel::start_bore_tunnel(&app, port)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -124,8 +127,8 @@ pub async fn stop_party(state: tauri::State<'_, AppState>) -> Result<(), String>
     state.party_active.store(false, Ordering::SeqCst);
 
     // Kill the bore tunnel subprocess
-    if let Some(mut child) = state.tunnel_process.lock().await.take() {
-        child.kill().await.ok();
+    if let Some(child) = state.tunnel_process.lock().await.take() {
+        child.kill().ok();
     }
 
     *state.tunnel_url.write().await = None;
@@ -247,6 +250,39 @@ pub async fn get_playback(
 #[tauri::command]
 pub async fn get_tunnel_url(state: tauri::State<'_, AppState>) -> Result<Option<String>, String> {
     Ok(state.tunnel_url.read().await.clone())
+}
+
+// ─── Updates ──────────────────────────────────────────────────────────────────
+
+/// Returns the new version string if an update is available, `null` if up to date.
+#[tauri::command]
+pub async fn check_for_updates(app: AppHandle) -> Result<Option<String>, String> {
+    use tauri_plugin_updater::UpdaterExt;
+    match app.updater().map_err(|e| e.to_string())?.check().await {
+        Ok(Some(update)) => Ok(Some(update.version)),
+        Ok(None) => Ok(None),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+/// Downloads and installs the latest update, then restarts the app.
+#[tauri::command]
+pub async fn install_update(app: AppHandle) -> Result<(), String> {
+    use tauri_plugin_updater::UpdaterExt;
+    let update = app
+        .updater()
+        .map_err(|e| e.to_string())?
+        .check()
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "No update available".to_string())?;
+
+    update
+        .download_and_install(|_chunk, _total| {}, || {})
+        .await
+        .map_err(|e| e.to_string())?;
+
+    app.restart();
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────

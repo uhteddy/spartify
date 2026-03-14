@@ -57,7 +57,7 @@ pub struct AppStateInner {
     pub config: RwLock<AppConfig>,
     pub server_port: RwLock<Option<u16>>,
     pub party_active: AtomicBool,
-    pub tunnel_process: Mutex<Option<tokio::process::Child>>,
+    pub tunnel_process: Mutex<Option<tauri_plugin_shell::process::CommandChild>>,
     /// Oneshot sender placed here by the OAuth flow; the deep link handler fires it.
     pub oauth_code_tx: Mutex<Option<tokio::sync::oneshot::Sender<String>>>,
 }
