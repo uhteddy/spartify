@@ -37,12 +37,7 @@
       gap: 24px;
     }
 
-    .logo {
-      font-size: 2.2rem;
-      font-weight: 800;
-      letter-spacing: -1px;
-    }
-
+    .logo { font-size: 2.2rem; font-weight: 800; letter-spacing: -1px; }
     .logo span { color: var(--green); }
 
     .join-card {
@@ -56,18 +51,11 @@
       gap: 16px;
     }
 
-    .join-card h2 {
-      font-size: 1.25rem;
-      font-weight: 700;
-    }
-
-    .join-card p {
-      color: var(--text-muted);
-      font-size: 0.9rem;
-    }
+    .join-card h2 { font-size: 1.25rem; font-weight: 700; }
+    .join-card p { color: var(--text-muted); font-size: 0.9rem; }
 
     /* ── Main UI ── */
-    #main-screen { display: none; }
+    #main-screen { display: none; flex-direction: column; height: 100dvh; }
 
     header {
       position: sticky;
@@ -75,13 +63,23 @@
       z-index: 10;
       background: var(--bg);
       border-bottom: 1px solid var(--surface2);
-      padding: 12px 16px;
+      padding: 10px 16px;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
+      flex-shrink: 0;
     }
 
-    header .logo { font-size: 1.4rem; }
+    header .logo { font-size: 1.3rem; }
+
+    .ws-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #555;
+      flex-shrink: 0;
+    }
+    .ws-indicator.connected { background: var(--green); }
 
     .guest-badge {
       margin-left: auto;
@@ -92,29 +90,127 @@
       color: var(--text-muted);
     }
 
+    /* ── Now Playing bar ── */
+    #now-playing-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--surface2);
+      padding: 10px 16px;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .np-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .np-art {
+      width: 44px;
+      height: 44px;
+      border-radius: 4px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: var(--surface2);
+    }
+
+    .np-info { flex: 1; min-width: 0; }
+
+    .np-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .np-artist {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .np-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .np-status {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--green);
+    }
+    .np-status.paused { color: #666; }
+
+    .np-open-btn {
+      background: none;
+      border: 1px solid #333;
+      border-radius: 20px;
+      padding: 3px 10px;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      cursor: pointer;
+      white-space: nowrap;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .np-open-btn:hover { border-color: var(--green); color: var(--green); }
+
+    .np-progress-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .np-time { font-size: 0.7rem; color: #555; flex-shrink: 0; }
+
+    .np-bar {
+      flex: 1;
+      height: 3px;
+      background: #333;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .np-fill {
+      height: 100%;
+      background: var(--green);
+      border-radius: 2px;
+      transition: width 0.4s linear;
+      max-width: 100%;
+    }
+
+    /* ── Tabs ── */
     .tabs {
       display: flex;
       border-bottom: 1px solid var(--surface2);
+      flex-shrink: 0;
     }
 
     .tab {
       flex: 1;
-      padding: 12px;
+      padding: 11px 8px;
       text-align: center;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       font-weight: 600;
       color: var(--text-muted);
       cursor: pointer;
       border-bottom: 2px solid transparent;
       transition: color 0.15s, border-color 0.15s;
     }
+    .tab.active { color: var(--green); border-bottom-color: var(--green); }
 
-    .tab.active {
-      color: var(--green);
-      border-bottom-color: var(--green);
-    }
-
-    .tab-content { display: none; padding: 16px; }
+    .tab-content { display: none; padding: 14px 16px; overflow-y: auto; flex: 1; }
     .tab-content.active { display: block; }
 
     /* ── Inputs & buttons ── */
@@ -129,7 +225,6 @@
       outline: none;
       transition: border-color 0.15s;
     }
-
     input[type="text"]:focus { border-color: var(--green); }
     input[type="text"]::placeholder { color: var(--text-muted); }
 
@@ -146,31 +241,14 @@
       cursor: pointer;
       transition: opacity 0.15s, transform 0.1s;
     }
-
     .btn:active { transform: scale(0.97); }
     .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
-    .btn-primary {
-      background: var(--green);
-      color: #000;
-      width: 100%;
-    }
-
+    .btn-primary { background: var(--green); color: #000; width: 100%; }
     .btn-primary:hover:not(:disabled) { background: var(--green-dark); }
 
-    .btn-ghost {
-      background: transparent;
-      color: var(--text-muted);
-      padding: 4px 8px;
-      font-size: 0.8rem;
-    }
-
-    /* ── Search results ── */
-    .search-wrap {
-      position: relative;
-      margin-bottom: 12px;
-    }
-
+    /* ── Search ── */
+    .search-wrap { position: relative; margin-bottom: 12px; }
     .search-wrap input { padding-right: 40px; }
 
     .clear-btn {
@@ -197,7 +275,6 @@
       padding: 10px 12px;
       transition: background 0.15s;
     }
-
     .track-card:hover { background: var(--surface2); }
 
     .track-art {
@@ -212,7 +289,7 @@
     .track-info { flex: 1; min-width: 0; }
 
     .track-title {
-      font-size: 0.95rem;
+      font-size: 0.92rem;
       font-weight: 600;
       white-space: nowrap;
       overflow: hidden;
@@ -220,12 +297,14 @@
     }
 
     .track-sub {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: var(--text-muted);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
+
+    .track-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
     .add-btn {
       background: var(--green);
@@ -242,10 +321,27 @@
       flex-shrink: 0;
       transition: background 0.15s, transform 0.1s;
     }
-
     .add-btn:hover { background: var(--green-dark); }
     .add-btn:active { transform: scale(0.9); }
     .add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .open-spotify-btn {
+      background: none;
+      border: 1px solid #333;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      text-decoration: none;
+      flex-shrink: 0;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .open-spotify-btn:hover { border-color: var(--green); color: var(--green); }
 
     /* ── Queue ── */
     .queue-item {
@@ -286,7 +382,6 @@
       line-height: 1;
       transition: color 0.15s, background 0.15s;
     }
-
     .vote-btn:hover { color: var(--green); background: rgba(29,185,84,0.1); }
     .vote-btn.voted-up { color: var(--green); }
     .vote-btn.voted-down { color: #e74c3c; }
@@ -298,13 +393,24 @@
       text-align: center;
     }
 
+    /* ── History ── */
+    .history-item {
+      background: var(--surface);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      opacity: 0.75;
+    }
+
     /* ── Misc ── */
     .empty-state {
       text-align: center;
       padding: 40px 20px;
       color: var(--text-muted);
     }
-
     .empty-state .icon { font-size: 2.5rem; margin-bottom: 12px; }
 
     .toast-container {
@@ -331,7 +437,6 @@
       max-width: 300px;
       text-align: center;
     }
-
     .toast.error { background: #c0392b; }
     .toast.success { background: var(--green); color: #000; }
 
@@ -349,18 +454,7 @@
       border-radius: 50%;
       animation: spin 0.7s linear infinite;
     }
-
     @keyframes spin { to { transform: rotate(360deg); } }
-
-    .ws-indicator {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #555;
-      flex-shrink: 0;
-    }
-
-    .ws-indicator.connected { background: var(--green); }
   </style>
 </head>
 <body>
@@ -368,7 +462,6 @@
 <!-- ── Join Screen ── -->
 <div id="join-screen">
   <div class="logo">Spar<span>tify</span></div>
-
   <div class="join-card">
     <h2>Join the Party</h2>
     <p>Enter your name to start requesting songs.</p>
@@ -386,9 +479,32 @@
     <div class="guest-badge" id="guest-name-badge"></div>
   </header>
 
+  <!-- Now Playing bar (visible when something is playing) -->
+  <div id="now-playing-bar">
+    <div class="np-row">
+      <img class="np-art" id="np-art" src="" alt="" onerror="this.style.visibility='hidden'" />
+      <div class="np-info">
+        <div class="np-title" id="np-title">—</div>
+        <div class="np-artist" id="np-artist"></div>
+      </div>
+      <div class="np-right">
+        <div class="np-status" id="np-status">▶ Playing</div>
+        <a class="np-open-btn" id="np-open-btn" href="#" target="_blank" rel="noopener">
+          Open ↗
+        </a>
+      </div>
+    </div>
+    <div class="np-progress-row">
+      <span class="np-time" id="np-elapsed">0:00</span>
+      <div class="np-bar"><div class="np-fill" id="np-fill" style="width:0%"></div></div>
+      <span class="np-time" id="np-duration">0:00</span>
+    </div>
+  </div>
+
   <div class="tabs">
     <div class="tab active" onclick="switchTab('search')">Search</div>
     <div class="tab" onclick="switchTab('queue')">Queue <span id="queue-badge"></span></div>
+    <div class="tab" onclick="switchTab('history')">History</div>
   </div>
 
   <!-- Search tab -->
@@ -415,6 +531,16 @@
       </div>
     </div>
   </div>
+
+  <!-- History tab -->
+  <div class="tab-content" id="tab-history">
+    <div id="history-list">
+      <div class="empty-state">
+        <div class="icon">🕐</div>
+        <p>No tracks have been played yet</p>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Toast container -->
@@ -422,12 +548,21 @@
 
 <script>
   // ── State ──────────────────────────────────────────────────────────────────
-  let guestToken = localStorage.getItem('spartify_token');
-  let guestName  = localStorage.getItem('spartify_name');
-  let queue      = [];
-  let myVotes    = {}; // track_id -> 'up' | 'down'
-  let ws         = null;
+  let guestToken  = localStorage.getItem('spartify_token');
+  let guestName   = localStorage.getItem('spartify_name');
+  let queue       = [];
+  let history     = [];
+  let myVotes     = {};
+  let ws          = null;
   let searchTimer = null;
+
+  // Playback interpolation
+  let pbIsPlaying    = false;
+  let pbProgressMs   = 0;
+  let pbDurationMs   = 0;
+  let pbSyncedAt     = 0;
+  let pbTrackId      = null;
+  let progressTick   = null;
 
   const BASE = window.location.origin;
 
@@ -436,6 +571,8 @@
     if (guestToken && guestName) {
       showMain(guestName);
       connectWS();
+      fetchPlayback();
+      fetchHistory();
     } else {
       document.getElementById('join-screen').style.display = 'flex';
     }
@@ -445,6 +582,16 @@
     document.getElementById('search-input').addEventListener('keydown', e => {
       if (e.key === 'Enter') doSearch();
     });
+
+    // Progress interpolation tick
+    progressTick = setInterval(() => {
+      if (!pbIsPlaying || pbDurationMs <= 0) return;
+      const elapsed = pbProgressMs + (Date.now() - pbSyncedAt);
+      const clamped = Math.min(elapsed, pbDurationMs);
+      document.getElementById('np-elapsed').textContent = fmtDuration(clamped);
+      const pct = (clamped / pbDurationMs) * 100;
+      document.getElementById('np-fill').style.width = pct + '%';
+    }, 500);
   });
 
   // ── Join ───────────────────────────────────────────────────────────────────
@@ -470,6 +617,8 @@
       localStorage.setItem('spartify_name', guestName);
       showMain(guestName);
       connectWS();
+      fetchPlayback();
+      fetchHistory();
     } catch (err) {
       const el = document.getElementById('join-error');
       el.textContent = 'Could not join: ' + err.message;
@@ -482,7 +631,8 @@
 
   function showMain(name) {
     document.getElementById('join-screen').style.display = 'none';
-    document.getElementById('main-screen').style.display = 'block';
+    const ms = document.getElementById('main-screen');
+    ms.style.display = 'flex';
     document.getElementById('guest-name-badge').textContent = name;
   }
 
@@ -494,16 +644,20 @@
     ws.onopen = () => setWsDot(true);
     ws.onclose = () => {
       setWsDot(false);
-      // Reconnect after 3 seconds
       setTimeout(connectWS, 3000);
     };
     ws.onerror = () => setWsDot(false);
     ws.onmessage = (e) => {
       try {
         const msg = JSON.parse(e.data);
-        if (msg.type === 'queue_update') {
+        if (msg.type === 'queue_update' && Array.isArray(msg.queue)) {
           queue = msg.queue;
           renderQueue();
+        } else if (msg.type === 'playback_update') {
+          applyPlayback(msg.playback);
+        } else if (msg.type === 'history_update' && Array.isArray(msg.tracks)) {
+          history = msg.tracks;
+          renderHistory();
         }
       } catch (_) {}
     };
@@ -511,20 +665,99 @@
 
   function setWsDot(on) {
     const dot = document.getElementById('ws-dot');
-    if (on) dot.classList.add('connected');
-    else dot.classList.remove('connected');
+    dot.classList.toggle('connected', on);
+  }
+
+  // ── Playback ───────────────────────────────────────────────────────────────
+  async function fetchPlayback() {
+    try {
+      const res = await fetch(`${BASE}/api/playback`);
+      if (!res.ok) return;
+      const pb = await res.json();
+      applyPlayback(pb);
+    } catch (_) {}
+    // Poll every 5s as fallback (WS pushes updates too)
+    setTimeout(fetchPlayback, 5000);
+  }
+
+  function applyPlayback(pb) {
+    const bar = document.getElementById('now-playing-bar');
+    if (!pb) { bar.style.display = 'none'; return; }
+
+    bar.style.display = 'flex';
+
+    pbIsPlaying  = pb.is_playing;
+    pbProgressMs = pb.progress_ms ?? 0;
+    pbDurationMs = pb.duration_ms ?? 0;
+    pbSyncedAt   = Date.now();
+    pbTrackId    = pb.track_id ?? null;
+
+    document.getElementById('np-title').textContent  = pb.track_name || '—';
+    document.getElementById('np-artist').textContent = pb.artist_name || '';
+
+    const art = document.getElementById('np-art');
+    if (pb.album_art_url) {
+      art.src = pb.album_art_url;
+      art.style.visibility = 'visible';
+    } else {
+      art.style.visibility = 'hidden';
+    }
+
+    const status = document.getElementById('np-status');
+    status.textContent = pb.is_playing ? '▶ Playing' : '⏸ Paused';
+    status.className = 'np-status' + (pb.is_playing ? '' : ' paused');
+
+    const openBtn = document.getElementById('np-open-btn');
+    if (pb.track_id) {
+      openBtn.href = `https://open.spotify.com/track/${pb.track_id}`;
+      openBtn.style.display = 'inline-flex';
+    } else {
+      openBtn.style.display = 'none';
+    }
+
+    document.getElementById('np-duration').textContent = fmtDuration(pbDurationMs);
+    const pct = pbDurationMs > 0 ? (pbProgressMs / pbDurationMs) * 100 : 0;
+    document.getElementById('np-fill').style.width = pct + '%';
+    document.getElementById('np-elapsed').textContent = fmtDuration(pbProgressMs);
+  }
+
+  // ── History ────────────────────────────────────────────────────────────────
+  async function fetchHistory() {
+    try {
+      const res = await fetch(`${BASE}/api/history`);
+      if (!res.ok) return;
+      history = await res.json();
+      renderHistory();
+    } catch (_) {}
+  }
+
+  function renderHistory() {
+    const container = document.getElementById('history-list');
+    if (!history.length) {
+      container.innerHTML = '<div class="empty-state"><div class="icon">🕐</div><p>No tracks have been played yet</p></div>';
+      return;
+    }
+    container.innerHTML = history.map(track => `
+      <div class="history-item">
+        <img class="track-art" src="${track.album_art_url || ''}" alt="" onerror="this.style.display='none'" />
+        <div class="track-info">
+          <div class="track-title">${esc(track.title)}</div>
+          <div class="track-sub">${esc(track.artist)} · ${esc(track.album)}</div>
+        </div>
+        <a class="open-spotify-btn" href="https://open.spotify.com/track/${track.id}"
+           target="_blank" rel="noopener" title="Open in Spotify">↗</a>
+      </div>`).join('');
   }
 
   // ── Tabs ───────────────────────────────────────────────────────────────────
-  let activeTab = 'search';
+  const TAB_NAMES = ['search', 'queue', 'history'];
 
   function switchTab(tab) {
-    activeTab = tab;
     document.querySelectorAll('.tab').forEach((el, i) => {
-      el.classList.toggle('active', ['search','queue'][i] === tab);
+      el.classList.toggle('active', TAB_NAMES[i] === tab);
     });
     document.querySelectorAll('.tab-content').forEach((el, i) => {
-      el.classList.toggle('active', ['tab-search','tab-queue'][i] === `tab-${tab}`);
+      el.classList.toggle('active', TAB_NAMES[i] === tab);
     });
   }
 
@@ -567,9 +800,7 @@
       container.innerHTML = '<div class="empty-state"><div class="icon">😕</div><p>No results found</p></div>';
       return;
     }
-
     const inQueue = new Set(queue.map(e => e.track.id));
-
     container.innerHTML = '<div class="track-list">' +
       tracks.map(track => {
         const already = inQueue.has(track.id);
@@ -580,10 +811,14 @@
             <div class="track-title">${esc(track.title)}</div>
             <div class="track-sub">${esc(track.artist)} · ${esc(track.album)}</div>
           </div>
-          <button class="add-btn" ${already ? 'disabled title="Already in queue"' : ''}
-                  onclick="addToQueue('${track.id}', this)">
-            ${already ? '✓' : '+'}
-          </button>
+          <div class="track-actions">
+            <a class="open-spotify-btn" href="https://open.spotify.com/track/${track.id}"
+               target="_blank" rel="noopener" title="Open in Spotify">↗</a>
+            <button class="add-btn" ${already ? 'disabled title="Already in queue"' : ''}
+                    onclick="addToQueue('${track.id}', this)">
+              ${already ? '✓' : '+'}
+            </button>
+          </div>
         </div>`;
       }).join('') +
     '</div>';
@@ -647,14 +882,6 @@
         </div>
       </div>`;
     }).join('');
-
-    // Also refresh search results to update "already in queue" state
-    const q = document.getElementById('search-input').value.trim();
-    if (q) renderSearchResults(
-      Array.from(document.querySelectorAll('.track-card')).map(el => ({
-        id: el.querySelector('.add-btn')?.getAttribute('onclick')?.match(/'([^']+)'/)?.[1],
-      }))
-    );
   }
 
   async function castVote(trackId, direction) {
@@ -665,8 +892,6 @@
         body: JSON.stringify({ track_id: trackId, direction, guest_token: guestToken }),
       });
       if (!res.ok) throw new Error(await res.text());
-
-      // Toggle local vote state
       if (myVotes[trackId] === direction) {
         delete myVotes[trackId];
       } else {
@@ -680,6 +905,11 @@
   // ── Helpers ────────────────────────────────────────────────────────────────
   function esc(str) {
     return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function fmtDuration(ms) {
+    const s = Math.floor((ms || 0) / 1000);
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   }
 
   function toast(msg, type = '') {

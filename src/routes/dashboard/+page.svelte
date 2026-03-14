@@ -1,9 +1,44 @@
 <script lang="ts">
   import { invoke } from '@tauri-apps/api/core';
-  import { listen } from '@tauri-apps/api/event';
   import { onMount, onDestroy } from 'svelte';
   import QRCode from 'qrcode';
 
+  // ── Spotify Web Playback SDK types ─────────────────────────────────────────
+  declare global {
+    interface Window {
+      Spotify: {
+        Player: new (options: {
+          name: string;
+          getOAuthToken: (cb: (token: string) => void) => void;
+          volume?: number;
+        }) => SpotifyPlayer;
+      };
+      onSpotifyWebPlaybackSDKReady: () => void;
+    }
+  }
+
+  interface SpotifyPlayer {
+    connect(): Promise<boolean>;
+    disconnect(): void;
+    addListener(event: 'ready', cb: (data: { device_id: string }) => void): void;
+    addListener(event: 'player_state_changed', cb: (state: SpotifyPlayerState | null) => void): void;
+    addListener(event: string, cb: (...args: unknown[]) => void): void;
+  }
+
+  interface SpotifyPlayerState {
+    position: number;
+    duration: number;
+    paused: boolean;
+    track_window: {
+      current_track: {
+        name: string;
+        artists: Array<{ name: string }>;
+        album: { images: Array<{ url: string }> };
+      };
+    };
+  }
+
+  // ── Domain interfaces ───────────────────────────────────────────────────────
   interface Track {
     id: string;
     uri: string;
@@ -29,11 +64,29 @@
 
   interface PlaybackState {
     is_playing: boolean;
+    track_id: string | null;
     track_name: string | null;
     artist_name: string | null;
     album_art_url: string | null;
     progress_ms: number | null;
     duration_ms: number | null;
+  }
+
+  interface Track {
+    id: string;
+    uri: string;
+    title: string;
+    artist: string;
+    album: string;
+    album_art_url: string | null;
+    duration_ms: number;
+  }
+
+  interface Device {
+    id: string | null;
+    name: string;
+    device_type: string;
+    is_active: boolean;
   }
 
   // ── State ──────────────────────────────────────────────────────────────────
@@ -50,12 +103,42 @@
   let updateVersion = $state<string | null>(null);
   let updateInstalling = $state(false);
 
-  // ── Lifecycle ──────────────────────────────────────────────────────────────
-  let pollInterval: ReturnType<typeof setInterval>;
+  // SDK & device picker
+  let sdkPlayer = $state<SpotifyPlayer | null>(null);
+  let sdkDeviceId = $state<string | null>(null);
+  let accessToken = $state<string | null>(null);
+  let devices = $state<Device[]>([]);
+  let showDevicePicker = $state(false);
 
+  // Spotify's actual upcoming queue (separate from Spartify party queue)
+  let spotifyQueue = $state<Track[]>([]);
+  let controlLoading = $state(false);
+
+  // Progress interpolation
+  let syncedProgressMs = $state(0);
+  let syncedAt = $state(0);
+  let durationMs = $state(0);
+  let isPlaying = $state(false);
+  let displayProgressMs = $state(0);
+
+  // Derived: current album art / track / artist from SDK or API fallback
+  let nowPlayingArt = $derived(playback?.album_art_url ?? null);
+  let nowPlayingTrack = $derived(playback?.track_name ?? null);
+  let nowPlayingArtist = $derived(playback?.artist_name ?? null);
+
+  let progressPct = $derived(durationMs > 0 ? (displayProgressMs / durationMs) * 100 : 0);
+
+  // ── Intervals & WebSocket ─────────────────────────────────────────────────
+  let pollInterval: ReturnType<typeof setInterval>;
+  let progressInterval: ReturnType<typeof setInterval>;
+  let ws: WebSocket | null = null;
+  let wsReconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+  let wsDestroyed = false;
+
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
   onMount(async () => {
-    // Silently check for updates in the background
     invoke<string | null>('check_for_updates').then(v => { updateVersion = v; }).catch(() => {});
+
     // Restore party state if already active
     const url = await invoke<string | null>('get_tunnel_url');
     if (url) {
@@ -67,19 +150,151 @@
     await refreshQueue();
     await refreshGuests();
     await refreshPlayback();
+    await refreshDevices();
 
+    // Get access token and init SDK
+    try {
+      const token = await invoke<string | null>('get_access_token');
+      if (token) {
+        accessToken = token;
+        initSpotifySDK(token);
+      }
+    } catch (e) {
+      console.error('Failed to get access token', e);
+    }
+
+    // 3s fallback poll for playback + Spotify queue
     pollInterval = setInterval(async () => {
       if (partyActive) {
         await refreshQueue();
         await refreshGuests();
-        await refreshPlayback();
       }
-    }, 5000);
+      await refreshPlayback();
+      await refreshSpotifyQueue();
+    }, 3000);
+
+    // 500ms progress interpolation tick
+    progressInterval = setInterval(() => {
+      if (isPlaying) {
+        displayProgressMs = Math.min(syncedProgressMs + (Date.now() - syncedAt), durationMs);
+      } else {
+        displayProgressMs = syncedProgressMs;
+      }
+    }, 500);
   });
 
   onDestroy(() => {
     clearInterval(pollInterval);
+    clearInterval(progressInterval);
+    disconnectWebSocket(true);
+    if (sdkPlayer) {
+      try { sdkPlayer.disconnect(); } catch {}
+    }
   });
+
+  // ── Spotify Web Playback SDK ───────────────────────────────────────────────
+  function initSpotifySDK(token: string) {
+    window.onSpotifyWebPlaybackSDKReady = () => {
+      const player = new window.Spotify.Player({
+        name: 'Spartify',
+        getOAuthToken: (cb) => { cb(token); },
+        volume: 0.8,
+      });
+
+      player.addListener('ready', async ({ device_id }) => {
+        sdkDeviceId = device_id;
+        try {
+          await invoke('set_sdk_device_id', { deviceId: device_id });
+        } catch (e) {
+          console.error('Failed to set SDK device id', e);
+        }
+        await refreshDevices();
+      });
+
+      player.addListener('player_state_changed', (state) => {
+        if (!state) return;
+        const ct = state.track_window.current_track;
+        // Update progress interpolation state
+        syncedProgressMs = state.position;
+        syncedAt = Date.now();
+        durationMs = state.duration;
+        isPlaying = !state.paused;
+        displayProgressMs = state.position;
+
+        // Mirror into playback so the sidebar reflects SDK data immediately
+        playback = {
+          is_playing: !state.paused,
+          track_name: ct.name,
+          artist_name: ct.artists.map(a => a.name).join(', '),
+          album_art_url: ct.album.images[0]?.url ?? null,
+          progress_ms: state.position,
+          duration_ms: state.duration,
+        };
+      });
+
+      player.addListener('not_ready', () => {
+        sdkDeviceId = null;
+      });
+
+      player.connect();
+      sdkPlayer = player;
+    };
+
+    // Inject SDK script if not already present
+    if (!document.getElementById('spotify-sdk-script')) {
+      const script = document.createElement('script');
+      script.id = 'spotify-sdk-script';
+      script.src = 'https://sdk.scdn.co/spotify-player.js';
+      document.head.appendChild(script);
+    }
+  }
+
+  // ── WebSocket ──────────────────────────────────────────────────────────────
+  function connectWebSocket(url: string) {
+    if (wsDestroyed) return;
+    disconnectWebSocket(false);
+
+    const wsUrl = url.replace('http://', 'ws://').replace('https://', 'wss://') + '/ws';
+    ws = new WebSocket(wsUrl);
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'queue_update' && Array.isArray(msg.queue)) {
+          queue = msg.queue;
+        } else if (msg.type === 'guests_update' && Array.isArray(msg.guests)) {
+          guests = msg.guests;
+        }
+      } catch {}
+    };
+
+    ws.onclose = () => {
+      if (!wsDestroyed && partyActive) {
+        wsReconnectTimeout = setTimeout(() => {
+          if (!wsDestroyed && partyActive && localUrl) {
+            connectWebSocket(localUrl);
+          }
+        }, 3000);
+      }
+    };
+
+    ws.onerror = () => {
+      ws?.close();
+    };
+  }
+
+  function disconnectWebSocket(destroy: boolean) {
+    if (destroy) wsDestroyed = true;
+    if (wsReconnectTimeout) {
+      clearTimeout(wsReconnectTimeout);
+      wsReconnectTimeout = null;
+    }
+    if (ws) {
+      ws.onclose = null;
+      ws.close();
+      ws = null;
+    }
+  }
 
   // ── QR Code ────────────────────────────────────────────────────────────────
   async function generateQr(url: string) {
@@ -104,6 +319,8 @@
       localUrl = result.local_url;
       partyActive = true;
       await generateQr(tunnelUrl);
+      wsDestroyed = false;
+      connectWebSocket(localUrl);
     } catch (e: unknown) {
       error = String(e);
     } finally {
@@ -116,10 +333,48 @@
     await invoke('stop_party');
     partyActive = false;
     tunnelUrl = '';
+    localUrl = '';
     qrDataUrl = '';
     queue = [];
     guests = [];
+    disconnectWebSocket(false);
+    wsDestroyed = false;
   }
+
+  // ── Devices ────────────────────────────────────────────────────────────────
+  async function refreshDevices() {
+    try {
+      devices = await invoke<Device[]>('get_devices');
+    } catch {}
+  }
+
+  async function transferPlayback(deviceId: string) {
+    try {
+      await invoke('transfer_playback', { deviceId });
+      await refreshDevices();
+      showDevicePicker = false;
+    } catch (e: unknown) {
+      error = String(e);
+    }
+  }
+
+  function toggleDevicePicker() {
+    showDevicePicker = !showDevicePicker;
+  }
+
+  function handleDevicePickerOutsideClick(e: MouseEvent) {
+    const target = e.target as HTMLElement;
+    if (!target.closest('.device-picker-wrapper')) {
+      showDevicePicker = false;
+    }
+  }
+
+  let activeDeviceName = $derived.by(() => {
+    const active = devices.find(d => d.is_active);
+    if (active) return active.name;
+    if (sdkDeviceId) return 'Spartify';
+    return 'No device';
+  });
 
   // ── Queue & playback ───────────────────────────────────────────────────────
   async function refreshQueue() {
@@ -131,7 +386,41 @@
   }
 
   async function refreshPlayback() {
-    try { playback = await invoke<PlaybackState | null>('get_playback'); } catch {}
+    try {
+      const pb = await invoke<PlaybackState | null>('get_playback');
+      if (pb) {
+        // Only update progress from API if SDK isn't active
+        if (!sdkPlayer) {
+          if (pb.progress_ms != null) {
+            syncedProgressMs = pb.progress_ms;
+            syncedAt = Date.now();
+          }
+          if (pb.duration_ms != null) durationMs = pb.duration_ms;
+          isPlaying = pb.is_playing;
+        }
+        playback = pb;
+      }
+    } catch {}
+  }
+
+  async function refreshSpotifyQueue() {
+    try { spotifyQueue = await invoke<Track[]>('get_spotify_queue'); } catch {}
+  }
+
+  async function playbackControl(cmd: 'spotify_play' | 'spotify_pause' | 'spotify_skip_next' | 'spotify_skip_previous') {
+    controlLoading = true;
+    try {
+      await invoke(cmd);
+      // Give Spotify 500ms to update state, then refresh
+      setTimeout(async () => {
+        await refreshPlayback();
+        await refreshSpotifyQueue();
+        controlLoading = false;
+      }, 500);
+    } catch (e: unknown) {
+      error = String(e);
+      controlLoading = false;
+    }
   }
 
   async function playNext() {
@@ -177,6 +466,8 @@
   }
 </script>
 
+<svelte:window onclick={handleDevicePickerOutsideClick} />
+
 <div class="root">
   {#if updateVersion}
     <div class="update-bar">
@@ -188,155 +479,253 @@
     </div>
   {/if}
 
-<div class="layout">
-  <!-- ── Left panel: share + guests ── -->
-  <aside class="sidebar">
-    <div class="logo">Spar<span>tify</span></div>
+  <div class="layout">
+    <!-- ── Left panel: share + guests ── -->
+    <aside class="sidebar">
+      <div class="logo">Spar<span>tify</span></div>
 
-    {#if !partyActive}
-      <div class="start-section">
-        <p class="hint">Start a party to get a shareable link for your guests.</p>
-        {#if error}
-          <div class="error">{error}</div>
-        {/if}
-        <button class="btn-primary big" onclick={startParty} disabled={loading}>
-          {#if loading}
-            <span class="spinner"></span> Starting…
-          {:else}
-            🎉 Start Party
+      {#if !partyActive}
+        <div class="start-section">
+          <p class="hint">Start a party to get a shareable link for your guests.</p>
+          {#if error}
+            <div class="error">{error}</div>
           {/if}
-        </button>
-      </div>
-    {:else}
-      <!-- QR + URL -->
-      <div class="share-card">
-        {#if qrDataUrl}
-          <img class="qr" src={qrDataUrl} alt="QR code for guests" />
-        {/if}
-        <div class="url-row">
-          <span class="url-text" title={tunnelUrl}>{tunnelUrl}</span>
-          <button class="icon-btn" onclick={copyUrl} title="Copy URL">⎘</button>
-        </div>
-        <p class="hint">Guests scan this QR or open the URL to join.</p>
-      </div>
-
-      <button class="btn-stop" onclick={stopParty}>■ Stop Party</button>
-    {/if}
-
-    <!-- Now playing -->
-    {#if playback}
-      <div class="now-playing">
-        <div class="np-label">Now Playing</div>
-        <div class="np-body">
-          {#if playback.album_art_url}
-            <img class="np-art" src={playback.album_art_url} alt="" />
-          {/if}
-          <div class="np-info">
-            <div class="np-track">{playback.track_name ?? '—'}</div>
-            <div class="np-artist">{playback.artist_name ?? ''}</div>
-            {#if playback.is_playing}
-              <div class="playing-badge">▶ Playing</div>
+          <button class="btn-primary big" onclick={startParty} disabled={loading}>
+            {#if loading}
+              <span class="spinner"></span> Starting…
             {:else}
-              <div class="playing-badge paused">⏸ Paused</div>
+              🎉 Start Party
             {/if}
+          </button>
+        </div>
+      {:else}
+        <!-- QR + URL -->
+        <div class="share-card">
+          {#if qrDataUrl}
+            <img class="qr" src={qrDataUrl} alt="QR code for guests" />
+          {/if}
+          <div class="url-row">
+            <span class="url-text" title={tunnelUrl}>{tunnelUrl}</span>
+            <button class="icon-btn" onclick={copyUrl} title="Copy URL">⎘</button>
+          </div>
+          <p class="hint">Guests scan this QR or open the URL to join.</p>
+        </div>
+
+        <button class="btn-stop" onclick={stopParty}>■ Stop Party</button>
+      {/if}
+
+      <!-- Now playing -->
+      {#if playback}
+        <div class="now-playing">
+          <div class="np-label">Now Playing</div>
+          <div class="np-body">
+            {#if nowPlayingArt}
+              <img class="np-art" src={nowPlayingArt} alt="" />
+            {:else}
+              <div class="np-art np-art-placeholder">♪</div>
+            {/if}
+            <div class="np-info">
+              <div class="np-track">{nowPlayingTrack ?? '—'}</div>
+              <div class="np-artist">{nowPlayingArtist ?? ''}</div>
+              {#if isPlaying}
+                <div class="playing-badge">▶ Playing</div>
+              {:else}
+                <div class="playing-badge paused">⏸ Paused</div>
+              {/if}
+            </div>
+          </div>
+
+          <!-- Progress bar -->
+          <div class="progress-bar-wrapper">
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: {progressPct}%"></div>
+            </div>
+            <div class="progress-times">
+              <span>{fmtDuration(displayProgressMs)}</span>
+              <span>{fmtDuration(durationMs)}</span>
+            </div>
+          </div>
+
+          <!-- Playback controls -->
+          <div class="pb-controls">
+            <button class="pb-btn" onclick={() => playbackControl('spotify_skip_previous')} disabled={controlLoading} title="Previous">⏮</button>
+            {#if isPlaying}
+              <button class="pb-btn pb-btn-main" onclick={() => playbackControl('spotify_pause')} disabled={controlLoading} title="Pause">⏸</button>
+            {:else}
+              <button class="pb-btn pb-btn-main" onclick={() => playbackControl('spotify_play')} disabled={controlLoading} title="Play">▶</button>
+            {/if}
+            <button class="pb-btn" onclick={() => playbackControl('spotify_skip_next')} disabled={controlLoading} title="Skip">⏭</button>
           </div>
         </div>
-      </div>
-    {:else}
-      <div class="now-playing inactive">
-        <div class="np-label">Now Playing</div>
-        <p class="hint">Open Spotify on any device and start playing to enable queue control.</p>
-      </div>
-    {/if}
-
-    <!-- Guests -->
-    <div class="guests-section">
-      <div class="section-header">
-        Guests
-        <span class="badge">{guests.length}</span>
-      </div>
-      {#if guests.length === 0}
-        <p class="hint">No guests yet</p>
       {:else}
-        <div class="guest-list">
-          {#each guests as guest (guest.id)}
-            <div class="guest-chip">{guest.name}</div>
-          {/each}
+        <div class="now-playing inactive">
+          <div class="np-label">Now Playing</div>
+          <p class="hint">Open Spotify on any device and start playing to enable queue control.</p>
         </div>
       {/if}
-    </div>
-  </aside>
 
-  <!-- ── Right panel: queue ── -->
-  <main class="queue-panel">
-    <div class="queue-header">
-      <div>
-        <h1>Queue</h1>
-        <span class="track-count">{queue.length} track{queue.length !== 1 ? 's' : ''}</span>
-      </div>
-      <div class="queue-actions">
-        {#if error}
-          <span class="error-inline">{error}</span>
-        {/if}
-        <button
-          class="btn-primary"
-          onclick={playNext}
-          disabled={playNextLoading || queue.length === 0}
-        >
-          {playNextLoading ? '…' : '▶ Play Next'}
+      <!-- Device picker -->
+      <div class="device-picker-wrapper">
+        <button class="device-btn" onclick={(e) => { e.stopPropagation(); toggleDevicePicker(); }}>
+          <span class="device-icon">🔊</span>
+          <span class="device-name">{activeDeviceName}</span>
+          <span class="device-chevron">{showDevicePicker ? '▲' : '▼'}</span>
         </button>
-      </div>
-    </div>
 
-    {#if queue.length === 0}
-      <div class="empty-queue">
-        <div class="empty-icon">🎵</div>
-        {#if partyActive}
-          <p>Waiting for guests to add songs…</p>
-          <p class="hint">Share the QR code to get the party started!</p>
-        {:else}
-          <p>Start a party to let guests add songs.</p>
-        {/if}
-      </div>
-    {:else}
-      <div class="queue-list">
-        {#each queue as entry, i (entry.track.id)}
-          <div class="queue-item" class:top={i === 0}>
-            <div class="pos">{i + 1}</div>
-
-            {#if entry.track.album_art_url}
-              <img class="art" src={entry.track.album_art_url} alt="" />
-            {:else}
-              <div class="art placeholder">♪</div>
+        {#if showDevicePicker}
+          <div class="device-dropdown" role="menu">
+            <!-- Spartify (this device) option -->
+            {#if sdkDeviceId}
+              {@const isSdkActive = devices.find(d => d.id === sdkDeviceId)?.is_active ?? false}
+              <button
+                class="device-option"
+                class:active={isSdkActive}
+                onclick={(e) => { e.stopPropagation(); transferPlayback(sdkDeviceId!); }}
+                role="menuitem"
+              >
+                <span class="device-option-name">Spartify (this device)</span>
+                {#if isSdkActive}
+                  <span class="device-active-dot"></span>
+                {/if}
+              </button>
             {/if}
 
-            <div class="track-info">
-              <div class="title">{entry.track.title}</div>
-              <div class="sub">{entry.track.artist} · {entry.track.album}</div>
-            </div>
-
-            <div class="meta">
-              <div
-                class="votes"
-                class:positive={entry.votes > 0}
-                class:negative={entry.votes < 0}
+            <!-- Other devices -->
+            {#each devices.filter(d => d.id !== sdkDeviceId) as device (device.id ?? device.name)}
+              <button
+                class="device-option"
+                class:active={device.is_active}
+                onclick={(e) => { e.stopPropagation(); if (device.id) transferPlayback(device.id); }}
+                role="menuitem"
+                disabled={!device.id}
               >
-                {entry.votes > 0 ? '+' : ''}{entry.votes} votes
-              </div>
-              <div class="duration">{fmtDuration(entry.track.duration_ms)}</div>
-            </div>
+                <span class="device-option-name">{device.name}</span>
+                <span class="device-option-type">{device.device_type}</span>
+                {#if device.is_active}
+                  <span class="device-active-dot"></span>
+                {/if}
+              </button>
+            {/each}
 
-            <button
-              class="remove-btn"
-              onclick={() => removeTrack(entry.track.id)}
-              title="Remove from queue"
-            >✕</button>
+            {#if devices.length === 0 && !sdkDeviceId}
+              <div class="device-empty">No devices found</div>
+            {/if}
           </div>
-        {/each}
+        {/if}
       </div>
-    {/if}
-  </main>
-</div>
+
+      <!-- Guests -->
+      <div class="guests-section">
+        <div class="section-header">
+          Guests
+          <span class="badge">{guests.length}</span>
+        </div>
+        {#if guests.length === 0}
+          <p class="hint">No guests yet</p>
+        {:else}
+          <div class="guest-list">
+            {#each guests as guest (guest.id)}
+              <div class="guest-chip">{guest.name}</div>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    </aside>
+
+    <!-- ── Right panel: queue ── -->
+    <main class="queue-panel">
+      <div class="queue-header">
+        <div>
+          <h1>Queue</h1>
+          <span class="track-count">{queue.length} track{queue.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div class="queue-actions">
+          {#if error}
+            <span class="error-inline">{error}</span>
+          {/if}
+          <button
+            class="btn-primary"
+            onclick={playNext}
+            disabled={playNextLoading || queue.length === 0}
+          >
+            {playNextLoading ? '…' : '▶ Play Next'}
+          </button>
+        </div>
+      </div>
+
+      <div class="queue-list">
+        {#if queue.length === 0}
+          <div class="empty-queue">
+            <div class="empty-icon">🎵</div>
+            {#if partyActive}
+              <p>Waiting for guests to add songs…</p>
+              <p class="hint">Share the QR code to get the party started!</p>
+            {:else}
+              <p>Start a party to let guests add songs.</p>
+            {/if}
+          </div>
+        {:else}
+          {#each queue as entry, i (entry.track.id)}
+            {#if i === 0}
+              <div class="up-next-label">Party Queue</div>
+            {/if}
+            <div class="queue-item" class:top={i === 0}>
+              <div class="pos">{i + 1}</div>
+
+              {#if entry.track.album_art_url}
+                <img class="art" src={entry.track.album_art_url} alt="" />
+              {:else}
+                <div class="art placeholder">♪</div>
+              {/if}
+
+              <div class="track-info">
+                <div class="title">{entry.track.title}</div>
+                <div class="sub">{entry.track.artist} · {entry.track.album}</div>
+              </div>
+
+              <div class="meta">
+                <div
+                  class="votes"
+                  class:positive={entry.votes > 0}
+                  class:negative={entry.votes < 0}
+                >
+                  {entry.votes > 0 ? '+' : ''}{entry.votes} votes
+                </div>
+                <div class="duration">{fmtDuration(entry.track.duration_ms)}</div>
+              </div>
+
+              <button
+                class="remove-btn"
+                onclick={() => removeTrack(entry.track.id)}
+                title="Remove from queue"
+              >✕</button>
+            </div>
+          {/each}
+        {/if}
+
+        <!-- Spotify's actual upcoming queue -->
+        {#if spotifyQueue.length > 0}
+          <div class="spotify-queue-divider">
+            <span>Spotify Queue</span>
+          </div>
+          {#each spotifyQueue.slice(0, 10) as track (track.id)}
+            <div class="queue-item spotify-q-item">
+              {#if track.album_art_url}
+                <img class="art" src={track.album_art_url} alt="" />
+              {:else}
+                <div class="art placeholder">♪</div>
+              {/if}
+              <div class="track-info">
+                <div class="title">{track.title}</div>
+                <div class="sub">{track.artist} · {track.album}</div>
+              </div>
+              <div class="duration">{fmtDuration(track.duration_ms)}</div>
+            </div>
+          {/each}
+        {/if}
+      </div>
+    </main>
+  </div>
 </div>
 
 <style>
@@ -493,16 +882,53 @@
   }
   .now-playing.inactive { opacity: 0.6; }
 
-  .np-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #777; }
+  .np-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #777;
+  }
 
-  .np-body { display: flex; gap: 10px; align-items: flex-start; }
+  .np-body { display: flex; gap: 12px; align-items: flex-start; }
 
-  .np-art { width: 48px; height: 48px; border-radius: 4px; object-fit: cover; flex-shrink: 0; }
+  .np-art {
+    width: 80px;
+    height: 80px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
 
-  .np-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .np-art-placeholder {
+    width: 80px;
+    height: 80px;
+    border-radius: 6px;
+    background: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #555;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+  }
 
-  .np-track { font-size: 0.88rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .np-artist { font-size: 0.78rem; color: #b3b3b3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .np-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+
+  .np-track {
+    font-size: 0.88rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .np-artist {
+    font-size: 0.78rem;
+    color: #b3b3b3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
   .playing-badge {
     font-size: 0.72rem;
@@ -511,6 +937,161 @@
     margin-top: 2px;
   }
   .playing-badge.paused { color: #777; }
+
+  /* Progress bar */
+  .progress-bar-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .progress-bar {
+    width: 100%;
+    height: 3px;
+    background: #444;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: #1db954;
+    border-radius: 2px;
+    transition: width 0.4s linear;
+    max-width: 100%;
+  }
+
+  .progress-times {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: #666;
+  }
+
+  /* Playback controls */
+  .pb-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding-top: 4px;
+  }
+
+  .pb-btn {
+    background: #333;
+    border: none;
+    color: #ccc;
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+  }
+  .pb-btn:hover:not(:disabled) { background: #444; color: #fff; }
+  .pb-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .pb-btn-main {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+    background: #1db954;
+    color: #000;
+  }
+  .pb-btn-main:hover:not(:disabled) { background: #17a349; color: #000; }
+
+  /* Device picker */
+  .device-picker-wrapper {
+    position: relative;
+  }
+
+  .device-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    background: #282828;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: #ccc;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    text-align: left;
+  }
+  .device-btn:hover { border-color: #555; background: #2f2f2f; }
+
+  .device-icon { font-size: 0.9rem; flex-shrink: 0; }
+
+  .device-name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #ccc;
+  }
+
+  .device-chevron { font-size: 0.6rem; color: #555; flex-shrink: 0; }
+
+  .device-dropdown {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    overflow: hidden;
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+
+  .device-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 10px 14px;
+    color: #ccc;
+    font-size: 0.82rem;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.1s;
+  }
+  .device-option:hover:not(:disabled) { background: #333; color: #fff; }
+  .device-option.active { color: #1db954; }
+  .device-option:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .device-option-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .device-option-type {
+    font-size: 0.72rem;
+    color: #555;
+    flex-shrink: 0;
+    text-transform: capitalize;
+  }
+
+  .device-active-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #1db954;
+    flex-shrink: 0;
+  }
+
+  .device-empty {
+    padding: 10px 14px;
+    font-size: 0.8rem;
+    color: #555;
+    text-align: center;
+  }
 
   /* Guests */
   .guests-section { display: flex; flex-direction: column; gap: 8px; }
@@ -654,6 +1235,16 @@
     gap: 6px;
   }
 
+  /* "Up Next" label */
+  .up-next-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #1db954;
+    padding: 4px 2px 2px;
+  }
+
   .queue-item {
     display: flex;
     align-items: center;
@@ -664,7 +1255,16 @@
     transition: background 0.15s;
   }
   .queue-item:hover { background: #222; }
-  .queue-item.top { border-left: 3px solid #1db954; }
+  .queue-item.top {
+    border-left: 3px solid #1db954;
+    padding-left: 11px;
+    padding-top: 13px;
+    padding-bottom: 13px;
+    background: #1f2a22;
+  }
+  .queue-item.top .title { font-size: 0.95rem; }
+  .queue-item.top .art { width: 50px; height: 50px; }
+  .queue-item.top .art.placeholder { width: 50px; height: 50px; }
 
   .pos {
     width: 24px;
@@ -741,4 +1341,29 @@
     transition: color 0.15s, background 0.15s;
   }
   .remove-btn:hover { color: #e74c3c; background: rgba(231,76,60,0.1); }
+
+  /* Spotify queue divider */
+  .spotify-queue-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 2px 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #555;
+  }
+  .spotify-queue-divider::before,
+  .spotify-queue-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #282828;
+  }
+
+  .spotify-q-item {
+    opacity: 0.6;
+  }
+  .spotify-q-item:hover { opacity: 0.85; }
 </style>

@@ -54,8 +54,8 @@ pub async fn start_oauth_flow(
     let (tx, rx) = tokio::sync::oneshot::channel::<String>();
     *state.oauth_code_tx.lock().await = Some(tx);
 
-    let scopes =
-        "user-read-playback-state user-modify-playback-state user-read-currently-playing";
+    let scopes = "user-read-playback-state user-modify-playback-state \
+                  user-read-currently-playing streaming";
 
     let auth_url = reqwest::Url::parse_with_params(
         "https://accounts.spotify.com/authorize",

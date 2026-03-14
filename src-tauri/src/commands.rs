@@ -5,7 +5,7 @@ use tauri::AppHandle;
 
 use crate::server::routes::broadcast_queue_update;
 use crate::spotify::{api, auth};
-use crate::state::{AppConfig, AppState, GuestSession, QueueEntry, SpotifyAuth};
+use crate::state::{AppConfig, AppState, GuestSession, PlaybackState, QueueEntry, SpotifyAuth, Track};
 
 // ─── Spotify auth ─────────────────────────────────────────────────────────────
 
@@ -168,7 +168,8 @@ pub async fn play_next(state: tauri::State<'_, AppState>) -> Result<(), String> 
         }
     };
 
-    api::add_to_spotify_queue(&entry.track.uri, &access_token)
+    let device_id = state.active_device_id.read().await.clone();
+    api::add_to_spotify_queue(&entry.track.uri, device_id.as_deref(), &access_token)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -185,6 +186,17 @@ pub async fn play_next(state: tauri::State<'_, AppState>) -> Result<(), String> 
         let track_id = entry.track.id.clone();
         let mut votes = state.votes.write().await;
         votes.retain(|(tid, _), _| tid != &track_id);
+    }
+
+    // Record in history (newest first, cap at 30)
+    {
+        let mut past = state.past_tracks.write().await;
+        past.insert(0, entry.track.clone());
+        past.truncate(30);
+        let past_snap = past.clone();
+        let _ = state.ws_tx.send(
+            serde_json::json!({"type": "history_update", "tracks": past_snap}).to_string(),
+        );
     }
 
     broadcast_queue_update(&*state).await;
@@ -222,7 +234,7 @@ pub async fn get_guests(state: tauri::State<'_, AppState>) -> Result<Vec<GuestSe
 #[tauri::command]
 pub async fn get_playback(
     state: tauri::State<'_, AppState>,
-) -> Result<Option<api::PlaybackState>, String> {
+) -> Result<Option<PlaybackState>, String> {
     let access_token = {
         let spotify = state.spotify.read().await;
         match &*spotify {
@@ -250,6 +262,124 @@ pub async fn get_playback(
 #[tauri::command]
 pub async fn get_tunnel_url(state: tauri::State<'_, AppState>) -> Result<Option<String>, String> {
     Ok(state.tunnel_url.read().await.clone())
+}
+
+// ─── Device / Playback SDK ────────────────────────────────────────────────────
+
+/// Returns the current Spotify access token so the Web Playback SDK can be initialised.
+#[tauri::command]
+pub async fn get_access_token(state: tauri::State<'_, AppState>) -> Result<Option<String>, String> {
+    Ok(state
+        .spotify
+        .read()
+        .await
+        .as_ref()
+        .map(|a| a.access_token.clone()))
+}
+
+/// Called from the frontend when the Web Playback SDK player is ready.
+/// Stores the device_id and transfers playback to it.
+#[tauri::command]
+pub async fn set_sdk_device_id(
+    device_id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    *state.active_device_id.write().await = Some(device_id.clone());
+
+    let access_token = {
+        let spotify = state.spotify.read().await;
+        match &*spotify {
+            Some(a) => a.access_token.clone(),
+            None => return Ok(()), // SDK ready but not authenticated yet — ignore
+        }
+    };
+
+    // Transfer playback to Spartify (don't force play — respect current state)
+    api::transfer_playback(&device_id, false, &access_token)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Lists all available Spotify Connect devices.
+#[tauri::command]
+pub async fn get_devices(state: tauri::State<'_, AppState>) -> Result<Vec<api::Device>, String> {
+    let access_token = {
+        let spotify = state.spotify.read().await;
+        match &*spotify {
+            Some(a) => a.access_token.clone(),
+            None => return Err("Spotify not connected".into()),
+        }
+    };
+    api::get_devices(&access_token).await.map_err(|e| e.to_string())
+}
+
+/// Transfers Spotify playback to the given device and updates the active device in state.
+#[tauri::command]
+pub async fn transfer_playback(
+    device_id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    let access_token = {
+        let spotify = state.spotify.read().await;
+        match &*spotify {
+            Some(a) => a.access_token.clone(),
+            None => return Err("Spotify not connected".into()),
+        }
+    };
+
+    api::transfer_playback(&device_id, false, &access_token)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    *state.active_device_id.write().await = Some(device_id);
+    Ok(())
+}
+
+// ─── Playback controls ────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub async fn spotify_play(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    let (token, device_id) = get_token_and_device(&state).await?;
+    api::set_playback(true, device_id.as_deref(), &token)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn spotify_pause(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    let (token, device_id) = get_token_and_device(&state).await?;
+    api::set_playback(false, device_id.as_deref(), &token)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn spotify_skip_next(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    let (token, device_id) = get_token_and_device(&state).await?;
+    api::skip_next(device_id.as_deref(), &token)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn spotify_skip_previous(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    let (token, device_id) = get_token_and_device(&state).await?;
+    api::skip_previous(device_id.as_deref(), &token)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Returns what Spotify has queued up next (independent of the Spartify party queue).
+#[tauri::command]
+pub async fn get_spotify_queue(state: tauri::State<'_, AppState>) -> Result<Vec<Track>, String> {
+    let token = {
+        let spotify = state.spotify.read().await;
+        match &*spotify {
+            Some(a) => a.access_token.clone(),
+            None => return Err("Spotify not connected".into()),
+        }
+    };
+    api::get_spotify_queue(&token).await.map_err(|e| e.to_string())
 }
 
 // ─── Updates ──────────────────────────────────────────────────────────────────
@@ -307,6 +437,18 @@ async fn refresh_token_if_needed(state: &AppState) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+async fn get_token_and_device(state: &AppState) -> Result<(String, Option<String>), String> {
+    let token = {
+        let spotify = state.spotify.read().await;
+        match &*spotify {
+            Some(a) => a.access_token.clone(),
+            None => return Err("Spotify not connected".into()),
+        }
+    };
+    let device_id = state.active_device_id.read().await.clone();
+    Ok((token, device_id))
 }
 
 fn save_config(config: &AppConfig) {

@@ -15,16 +15,22 @@ pub async fn ws_handler(
 async fn handle_socket(socket: WebSocket, state: AppState) {
     let (mut sender, mut receiver) = socket.split();
 
-    // Send the current queue immediately on connect
-    let queue = state.queue.read().await.clone();
-    let init_msg = serde_json::json!({
-        "type": "queue_update",
-        "queue": queue,
-    })
-    .to_string();
+    // Send current state snapshots immediately on connect
+    let init_msgs = {
+        let queue = state.queue.read().await.clone();
+        let playback = state.playback_cache.read().await.clone();
+        let past = state.past_tracks.read().await.clone();
+        vec![
+            serde_json::json!({"type": "queue_update", "queue": queue}).to_string(),
+            serde_json::json!({"type": "playback_update", "playback": playback}).to_string(),
+            serde_json::json!({"type": "history_update", "tracks": past}).to_string(),
+        ]
+    };
 
-    if sender.send(Message::Text(init_msg.into())).await.is_err() {
-        return;
+    for msg in init_msgs {
+        if sender.send(Message::Text(msg.into())).await.is_err() {
+            return;
+        }
     }
 
     let mut rx = state.ws_tx.subscribe();

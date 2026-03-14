@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::spotify::api;
-use crate::state::{AppState, GuestSession, QueueEntry};
+use crate::state::{AppState, GuestSession, PlaybackState, QueueEntry, Track};
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
@@ -37,6 +37,20 @@ async fn broadcast_guests_update(state: &AppState) {
 
 fn current_time() -> u64 {
     crate::spotify::auth::current_time_secs()
+}
+
+// ─── GET /api/playback ────────────────────────────────────────────────────────
+
+pub async fn get_playback(
+    State(state): State<AppState>,
+) -> Json<Option<PlaybackState>> {
+    Json(state.playback_cache.read().await.clone())
+}
+
+// ─── GET /api/history ─────────────────────────────────────────────────────────
+
+pub async fn get_history(State(state): State<AppState>) -> Json<Vec<Track>> {
+    Json(state.past_tracks.read().await.clone())
 }
 
 // ─── GET /api/queue ───────────────────────────────────────────────────────────

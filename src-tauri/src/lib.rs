@@ -51,6 +51,15 @@ pub fn run() {
             commands::submit_oauth_code,
             commands::check_for_updates,
             commands::install_update,
+            commands::get_access_token,
+            commands::set_sdk_device_id,
+            commands::get_devices,
+            commands::transfer_playback,
+            commands::spotify_play,
+            commands::spotify_pause,
+            commands::spotify_skip_next,
+            commands::spotify_skip_previous,
+            commands::get_spotify_queue,
         ])
         .setup(|app| {
             use tauri_plugin_deep_link::DeepLinkExt;
