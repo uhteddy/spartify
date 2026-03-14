@@ -33,7 +33,7 @@
       "open": false
     },
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDNCODk2QUMzNkE0N0I3QzUKUldURnQwZHF3MnFKTzl4aHhETzN5TFVTUS80aGFhaUV1QUNyYWN6Z1YxcVYrR1JVanpqREtwa3IK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVENEFEQUQ5Q0Y5RTRDODEKUldTQlRKN1AyZHBLWFk3azJsTTNnTTB2SmsyS2V1c29BcGlDaFdVZTRLaUdVMjRGN1A4VGdaMjcK",
       "endpoints": [
         "https://github.com/uhteddy/spartify/releases/latest/download/latest.json"
       ]
