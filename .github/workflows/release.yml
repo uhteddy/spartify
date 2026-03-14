@@ -4,7 +4,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - "v[0-9]+.[0-9]+.[0-9]+"
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -12,20 +12,20 @@ env:
 jobs:
   release:
     permissions:
-      contents: write   # needed to create GitHub releases and upload assets
+      contents: write # needed to create GitHub releases and upload assets
 
     strategy:
       fail-fast: false
       matrix:
         include:
           - platform: macos-latest
-            target: aarch64-apple-darwin      # Apple Silicon
+            target: aarch64-apple-darwin # Apple Silicon
           - platform: macos-latest
-            target: x86_64-apple-darwin       # Intel Mac
+            target: x86_64-apple-darwin # Intel Mac
           - platform: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu  # Linux
+            target: x86_64-unknown-linux-gnu # Linux
           - platform: windows-latest
-            target: x86_64-pc-windows-msvc    # Windows
+            target: x86_64-pc-windows-msvc # Windows
 
     runs-on: ${{ matrix.platform }}
 
@@ -43,7 +43,7 @@ jobs:
       - name: Cache Rust build artifacts
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: './src-tauri -> target'
+          workspaces: "./src-tauri -> target"
 
       # WebKit and other native libs required on Linux
       - name: Install Linux system dependencies
@@ -77,14 +77,12 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Generate these once with: bunx tauri signer generate -w ~/.tauri/spartify.key
-          # Add the private key and password as GitHub repository secrets.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: 'Spartify ${{ github.ref_name }}'
-          releaseBody: 'See the assets below to download and install Spartify.'
-          releaseDraft: true    # publish manually after all platform builds finish
+          releaseName: "Spartify ${{ github.ref_name }}"
+          releaseBody: "See the assets below to download and install Spartify."
+          releaseDraft: true # publish manually after all platform builds finish
           prerelease: false
           args: --target ${{ matrix.target }}
