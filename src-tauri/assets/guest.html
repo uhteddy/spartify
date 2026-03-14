@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spartify</title>
+  <style>
+    :root {
+      --green: #1db954;
+      --green-dark: #17a349;
+      --bg: #121212;
+      --surface: #1e1e1e;
+      --surface2: #282828;
+      --text: #ffffff;
+      --text-muted: #b3b3b3;
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    /* ── Join screen ── */
+    #join-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      padding: 24px;
+      gap: 24px;
+    }
+
+    .logo {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+    }
+
+    .logo span { color: var(--green); }
+
+    .join-card {
+      width: 100%;
+      max-width: 360px;
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .join-card h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .join-card p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    /* ── Main UI ── */
+    #main-screen { display: none; }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--bg);
+      border-bottom: 1px solid var(--surface2);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header .logo { font-size: 1.4rem; }
+
+    .guest-badge {
+      margin-left: auto;
+      background: var(--surface2);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--surface2);
+    }
+
+    .tab {
+      flex: 1;
+      padding: 12px;
+      text-align: center;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .tab.active {
+      color: var(--green);
+      border-bottom-color: var(--green);
+    }
+
+    .tab-content { display: none; padding: 16px; }
+    .tab-content.active { display: block; }
+
+    /* ── Inputs & buttons ── */
+    input[type="text"] {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid #333;
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 1rem;
+      padding: 12px 14px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input[type="text"]:focus { border-color: var(--green); }
+    input[type="text"]::placeholder { color: var(--text-muted); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 20px;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--green);
+      color: #000;
+      width: 100%;
+    }
+
+    .btn-primary:hover:not(:disabled) { background: var(--green-dark); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      padding: 4px 8px;
+      font-size: 0.8rem;
+    }
+
+    /* ── Search results ── */
+    .search-wrap {
+      position: relative;
+      margin-bottom: 12px;
+    }
+
+    .search-wrap input { padding-right: 40px; }
+
+    .clear-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+
+    .track-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .track-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      transition: background 0.15s;
+    }
+
+    .track-card:hover { background: var(--surface2); }
+
+    .track-art {
+      width: 48px;
+      height: 48px;
+      border-radius: 4px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: var(--surface2);
+    }
+
+    .track-info { flex: 1; min-width: 0; }
+
+    .track-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .track-sub {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .add-btn {
+      background: var(--green);
+      color: #000;
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      font-size: 1.3rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    .add-btn:hover { background: var(--green-dark); }
+    .add-btn:active { transform: scale(0.9); }
+    .add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── Queue ── */
+    .queue-item {
+      background: var(--surface);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+    }
+
+    .queue-pos {
+      width: 24px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      font-weight: 700;
+    }
+
+    .vote-ctrl {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    .vote-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 2px 4px;
+      border-radius: 4px;
+      line-height: 1;
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .vote-btn:hover { color: var(--green); background: rgba(29,185,84,0.1); }
+    .vote-btn.voted-up { color: var(--green); }
+    .vote-btn.voted-down { color: #e74c3c; }
+
+    .vote-count {
+      font-size: 0.8rem;
+      font-weight: 700;
+      min-width: 20px;
+      text-align: center;
+    }
+
+    /* ── Misc ── */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+    }
+
+    .empty-state .icon { font-size: 2.5rem; margin-bottom: 12px; }
+
+    .toast-container {
+      position: fixed;
+      bottom: calc(16px + env(safe-area-inset-bottom));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--surface2);
+      color: var(--text);
+      border-radius: 20px;
+      padding: 10px 20px;
+      font-size: 0.875rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      animation: toast-in 0.25s ease;
+      max-width: 300px;
+      text-align: center;
+    }
+
+    .toast.error { background: #c0392b; }
+    .toast.success { background: var(--green); color: #000; }
+
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: var(--green);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .ws-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #555;
+      flex-shrink: 0;
+    }
+
+    .ws-indicator.connected { background: var(--green); }
+  </style>
+</head>
+<body>
+
+<!-- ── Join Screen ── -->
+<div id="join-screen">
+  <div class="logo">Spar<span>tify</span></div>
+
+  <div class="join-card">
+    <h2>Join the Party</h2>
+    <p>Enter your name to start requesting songs.</p>
+    <input type="text" id="name-input" placeholder="Your name" maxlength="32" autocomplete="off" />
+    <button class="btn btn-primary" id="join-btn" onclick="joinParty()">Join</button>
+    <p id="join-error" style="color:#e74c3c;font-size:0.85rem;display:none;"></p>
+  </div>
+</div>
+
+<!-- ── Main Screen ── -->
+<div id="main-screen">
+  <header>
+    <div class="logo">Spar<span>tify</span></div>
+    <div class="ws-indicator" id="ws-dot" title="Connection status"></div>
+    <div class="guest-badge" id="guest-name-badge"></div>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('search')">Search</div>
+    <div class="tab" onclick="switchTab('queue')">Queue <span id="queue-badge"></span></div>
+  </div>
+
+  <!-- Search tab -->
+  <div class="tab-content active" id="tab-search">
+    <div class="search-wrap">
+      <input type="text" id="search-input" placeholder="Search for a song..." autocomplete="off"
+             oninput="onSearchInput()" />
+      <button class="clear-btn" onclick="clearSearch()" id="clear-btn" style="display:none">✕</button>
+    </div>
+    <div id="search-results">
+      <div class="empty-state">
+        <div class="icon">🎵</div>
+        <p>Search for a song to add to the queue</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Queue tab -->
+  <div class="tab-content" id="tab-queue">
+    <div id="queue-list">
+      <div class="empty-state">
+        <div class="icon">🎶</div>
+        <p>The queue is empty. Be the first to add a song!</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toasts"></div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  let guestToken = localStorage.getItem('spartify_token');
+  let guestName  = localStorage.getItem('spartify_name');
+  let queue      = [];
+  let myVotes    = {}; // track_id -> 'up' | 'down'
+  let ws         = null;
+  let searchTimer = null;
+
+  const BASE = window.location.origin;
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', () => {
+    if (guestToken && guestName) {
+      showMain(guestName);
+      connectWS();
+    } else {
+      document.getElementById('join-screen').style.display = 'flex';
+    }
+    document.getElementById('name-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') joinParty();
+    });
+    document.getElementById('search-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') doSearch();
+    });
+  });
+
+  // ── Join ───────────────────────────────────────────────────────────────────
+  async function joinParty() {
+    const name = document.getElementById('name-input').value.trim();
+    if (!name) return;
+
+    const btn = document.getElementById('join-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>';
+
+    try {
+      const res = await fetch(`${BASE}/api/join`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      guestToken = data.guest_token;
+      guestName  = data.name;
+      localStorage.setItem('spartify_token', guestToken);
+      localStorage.setItem('spartify_name', guestName);
+      showMain(guestName);
+      connectWS();
+    } catch (err) {
+      const el = document.getElementById('join-error');
+      el.textContent = 'Could not join: ' + err.message;
+      el.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Join';
+    }
+  }
+
+  function showMain(name) {
+    document.getElementById('join-screen').style.display = 'none';
+    document.getElementById('main-screen').style.display = 'block';
+    document.getElementById('guest-name-badge').textContent = name;
+  }
+
+  // ── WebSocket ──────────────────────────────────────────────────────────────
+  function connectWS() {
+    const wsUrl = `ws://${window.location.host}/ws`;
+    ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => setWsDot(true);
+    ws.onclose = () => {
+      setWsDot(false);
+      // Reconnect after 3 seconds
+      setTimeout(connectWS, 3000);
+    };
+    ws.onerror = () => setWsDot(false);
+    ws.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'queue_update') {
+          queue = msg.queue;
+          renderQueue();
+        }
+      } catch (_) {}
+    };
+  }
+
+  function setWsDot(on) {
+    const dot = document.getElementById('ws-dot');
+    if (on) dot.classList.add('connected');
+    else dot.classList.remove('connected');
+  }
+
+  // ── Tabs ───────────────────────────────────────────────────────────────────
+  let activeTab = 'search';
+
+  function switchTab(tab) {
+    activeTab = tab;
+    document.querySelectorAll('.tab').forEach((el, i) => {
+      el.classList.toggle('active', ['search','queue'][i] === tab);
+    });
+    document.querySelectorAll('.tab-content').forEach((el, i) => {
+      el.classList.toggle('active', ['tab-search','tab-queue'][i] === `tab-${tab}`);
+    });
+  }
+
+  // ── Search ─────────────────────────────────────────────────────────────────
+  function onSearchInput() {
+    const q = document.getElementById('search-input').value.trim();
+    document.getElementById('clear-btn').style.display = q ? 'block' : 'none';
+    clearTimeout(searchTimer);
+    if (q.length < 2) return;
+    searchTimer = setTimeout(doSearch, 350);
+  }
+
+  function clearSearch() {
+    document.getElementById('search-input').value = '';
+    document.getElementById('clear-btn').style.display = 'none';
+    document.getElementById('search-results').innerHTML = `
+      <div class="empty-state"><div class="icon">🎵</div><p>Search for a song to add to the queue</p></div>`;
+  }
+
+  async function doSearch() {
+    const q = document.getElementById('search-input').value.trim();
+    if (!q) return;
+
+    const container = document.getElementById('search-results');
+    container.innerHTML = '<div class="empty-state"><span class="spinner"></span></div>';
+
+    try {
+      const res = await fetch(`${BASE}/api/search?q=${encodeURIComponent(q)}&token=${guestToken}`);
+      if (!res.ok) throw new Error(await res.text());
+      const tracks = await res.json();
+      renderSearchResults(tracks);
+    } catch (err) {
+      container.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>${err.message}</p></div>`;
+    }
+  }
+
+  function renderSearchResults(tracks) {
+    const container = document.getElementById('search-results');
+    if (!tracks.length) {
+      container.innerHTML = '<div class="empty-state"><div class="icon">😕</div><p>No results found</p></div>';
+      return;
+    }
+
+    const inQueue = new Set(queue.map(e => e.track.id));
+
+    container.innerHTML = '<div class="track-list">' +
+      tracks.map(track => {
+        const already = inQueue.has(track.id);
+        return `
+        <div class="track-card">
+          <img class="track-art" src="${track.album_art_url || ''}" alt="" onerror="this.style.display='none'" />
+          <div class="track-info">
+            <div class="track-title">${esc(track.title)}</div>
+            <div class="track-sub">${esc(track.artist)} · ${esc(track.album)}</div>
+          </div>
+          <button class="add-btn" ${already ? 'disabled title="Already in queue"' : ''}
+                  onclick="addToQueue('${track.id}', this)">
+            ${already ? '✓' : '+'}
+          </button>
+        </div>`;
+      }).join('') +
+    '</div>';
+  }
+
+  async function addToQueue(trackId, btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner" style="width:16px;height:16px;border-width:2px"></span>';
+
+    try {
+      const res = await fetch(`${BASE}/api/request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ track_id: trackId, guest_token: guestToken }),
+      });
+      if (res.status === 409) {
+        toast('Already in queue', 'error');
+        btn.innerHTML = '✓';
+        return;
+      }
+      if (!res.ok) throw new Error(await res.text());
+      btn.innerHTML = '✓';
+      toast('Added to queue!', 'success');
+      switchTab('queue');
+    } catch (err) {
+      btn.disabled = false;
+      btn.innerHTML = '+';
+      toast('Error: ' + err.message, 'error');
+    }
+  }
+
+  // ── Queue ──────────────────────────────────────────────────────────────────
+  function renderQueue() {
+    const badge = document.getElementById('queue-badge');
+    badge.textContent = queue.length ? `(${queue.length})` : '';
+
+    const container = document.getElementById('queue-list');
+    if (!queue.length) {
+      container.innerHTML = '<div class="empty-state"><div class="icon">🎶</div><p>The queue is empty. Be the first to add a song!</p></div>';
+      return;
+    }
+
+    container.innerHTML = queue.map((entry, i) => {
+      const myVote = myVotes[entry.track.id];
+      return `
+      <div class="queue-item">
+        <div class="queue-pos">${i + 1}</div>
+        <img class="track-art" src="${entry.track.album_art_url || ''}" alt="" onerror="this.style.display='none'" />
+        <div class="track-info">
+          <div class="track-title">${esc(entry.track.title)}</div>
+          <div class="track-sub">${esc(entry.track.artist)}</div>
+        </div>
+        <div class="vote-ctrl">
+          <button class="vote-btn ${myVote === 'up' ? 'voted-up' : ''}"
+                  onclick="castVote('${entry.track.id}', 'up')">▲</button>
+          <div class="vote-count" style="color:${entry.votes > 0 ? '#1db954' : entry.votes < 0 ? '#e74c3c' : '#b3b3b3'}">
+            ${entry.votes > 0 ? '+' : ''}${entry.votes}
+          </div>
+          <button class="vote-btn ${myVote === 'down' ? 'voted-down' : ''}"
+                  onclick="castVote('${entry.track.id}', 'down')">▼</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Also refresh search results to update "already in queue" state
+    const q = document.getElementById('search-input').value.trim();
+    if (q) renderSearchResults(
+      Array.from(document.querySelectorAll('.track-card')).map(el => ({
+        id: el.querySelector('.add-btn')?.getAttribute('onclick')?.match(/'([^']+)'/)?.[1],
+      }))
+    );
+  }
+
+  async function castVote(trackId, direction) {
+    try {
+      const res = await fetch(`${BASE}/api/vote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ track_id: trackId, direction, guest_token: guestToken }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+
+      // Toggle local vote state
+      if (myVotes[trackId] === direction) {
+        delete myVotes[trackId];
+      } else {
+        myVotes[trackId] = direction;
+      }
+    } catch (err) {
+      toast('Vote failed: ' + err.message, 'error');
+    }
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function esc(str) {
+    return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function toast(msg, type = '') {
+    const container = document.getElementById('toasts');
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.textContent = msg;
+    container.appendChild(el);
+    setTimeout(() => el.remove(), 3000);
+  }
+</script>
+</body>
+</html>

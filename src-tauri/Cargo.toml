@@ -23,3 +23,25 @@ tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
+# HTTP server (guest-facing web server embedded in the app)
+axum = { version = "0.7", features = ["ws", "macros"] }
+tower-http = { version = "0.5", features = ["cors"] }
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+futures-util = "0.3"
+
+# HTTP client (Spotify Web API)
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+
+# Deep link (custom URI scheme for Spotify OAuth callback)
+tauri-plugin-deep-link = "2"
+url = "2"
+
+# Utilities
+uuid = { version = "1", features = ["v4", "serde"] }
+base64 = "0.22"
+sha2 = "0.10"
+rand = "0.8"
+anyhow = "1"
+dirs = "5"

@@ -8,6 +8,13 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig(async () => ({
   plugins: [sveltekit()],
 
+  // Disable esbuild-based dep pre-bundling — esbuild binary gets SIGKILL on
+  // some macOS security policies (EDR/MDM). SvelteKit's SSR-aware imports work
+  // fine without it in dev mode.
+  optimizeDeps: {
+    noDiscovery: true,
+  },
+
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
   // 1. prevent Vite from obscuring rust errors
