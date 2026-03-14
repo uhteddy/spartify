@@ -11,6 +11,19 @@ use crate::state::{AppState, GuestSession, PlaybackState, QueueEntry, Track};
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
+#[derive(Deserialize)]
+pub struct TokenParams {
+    pub token: Uuid,
+}
+
+async fn require_guest(state: &AppState, token: Uuid) -> Result<(), (StatusCode, String)> {
+    if state.guests.read().await.contains_key(&token) {
+        Ok(())
+    } else {
+        Err((StatusCode::UNAUTHORIZED, "Invalid or missing guest token".into()))
+    }
+}
+
 pub async fn broadcast_queue_update(state: &AppState) {
     let queue = state.queue.read().await.clone();
     let _ = state.ws_tx.send(
@@ -43,20 +56,30 @@ fn current_time() -> u64 {
 
 pub async fn get_playback(
     State(state): State<AppState>,
-) -> Json<Option<PlaybackState>> {
-    Json(state.playback_cache.read().await.clone())
+    Query(params): Query<TokenParams>,
+) -> Result<Json<Option<PlaybackState>>, (StatusCode, String)> {
+    require_guest(&state, params.token).await?;
+    Ok(Json(state.playback_cache.read().await.clone()))
 }
 
 // ─── GET /api/history ─────────────────────────────────────────────────────────
 
-pub async fn get_history(State(state): State<AppState>) -> Json<Vec<Track>> {
-    Json(state.past_tracks.read().await.clone())
+pub async fn get_history(
+    State(state): State<AppState>,
+    Query(params): Query<TokenParams>,
+) -> Result<Json<Vec<Track>>, (StatusCode, String)> {
+    require_guest(&state, params.token).await?;
+    Ok(Json(state.past_tracks.read().await.clone()))
 }
 
 // ─── GET /api/spotify-queue ───────────────────────────────────────────────────
 
-pub async fn get_spotify_queue(State(state): State<AppState>) -> Json<Vec<Track>> {
-    Json(state.spotify_queue_cache.read().await.clone())
+pub async fn get_spotify_queue(
+    State(state): State<AppState>,
+    Query(params): Query<TokenParams>,
+) -> Result<Json<Vec<Track>>, (StatusCode, String)> {
+    require_guest(&state, params.token).await?;
+    Ok(Json(state.spotify_queue_cache.read().await.clone()))
 }
 
 // ─── GET /api/queue ───────────────────────────────────────────────────────────
@@ -66,9 +89,13 @@ pub struct QueueResponse {
     queue: Vec<QueueEntry>,
 }
 
-pub async fn get_queue(State(state): State<AppState>) -> Json<QueueResponse> {
+pub async fn get_queue(
+    State(state): State<AppState>,
+    Query(params): Query<TokenParams>,
+) -> Result<Json<QueueResponse>, (StatusCode, String)> {
+    require_guest(&state, params.token).await?;
     let queue = state.queue.read().await.clone();
-    Json(QueueResponse { queue })
+    Ok(Json(QueueResponse { queue }))
 }
 
 // ─── POST /api/join ───────────────────────────────────────────────────────────

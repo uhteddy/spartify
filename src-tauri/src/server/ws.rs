@@ -1,15 +1,26 @@
 use axum::extract::ws::{Message, WebSocket};
-use axum::extract::{State, WebSocketUpgrade};
+use axum::extract::{Query, State, WebSocketUpgrade};
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use futures_util::{SinkExt, StreamExt};
+use uuid::Uuid;
 
 use crate::state::AppState;
+
+#[derive(serde::Deserialize)]
+pub struct WsParams {
+    token: Uuid,
+}
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
     State(state): State<AppState>,
-) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| handle_socket(socket, state))
+    Query(params): Query<WsParams>,
+) -> Result<impl IntoResponse, StatusCode> {
+    if !state.guests.read().await.contains_key(&params.token) {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+    Ok(ws.on_upgrade(move |socket| handle_socket(socket, state)))
 }
 
 async fn handle_socket(socket: WebSocket, state: AppState) {
