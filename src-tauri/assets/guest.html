@@ -393,6 +393,35 @@
       text-align: center;
     }
 
+    .spotify-autoplay-divider {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 16px 0 10px;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .spotify-autoplay-divider::before,
+    .spotify-autoplay-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+    .autoplay-item {
+      background: var(--surface);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      opacity: 0.5;
+    }
+
     /* ── History ── */
     .history-item {
       background: var(--surface);
@@ -466,6 +495,9 @@
     <h2>Join the Party</h2>
     <p>Enter your name to start requesting songs.</p>
     <input type="text" id="name-input" placeholder="Your name" maxlength="32" autocomplete="off" />
+    <div id="password-wrap" style="display:none">
+      <input type="password" id="password-input" placeholder="Party password" autocomplete="off" />
+    </div>
     <button class="btn btn-primary" id="join-btn" onclick="joinParty()">Join</button>
     <p id="join-error" style="color:#e74c3c;font-size:0.85rem;display:none;"></p>
   </div>
@@ -550,8 +582,9 @@
   // ── State ──────────────────────────────────────────────────────────────────
   let guestToken  = localStorage.getItem('spartify_token');
   let guestName   = localStorage.getItem('spartify_name');
-  let queue       = [];
-  let history     = [];
+  let queue         = [];
+  let history       = [];
+  let spotifyQueue  = [];
   let myVotes     = {};
   let ws          = null;
   let searchTimer = null;
@@ -579,6 +612,9 @@
     document.getElementById('name-input').addEventListener('keydown', e => {
       if (e.key === 'Enter') joinParty();
     });
+    document.getElementById('password-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') joinParty();
+    });
     document.getElementById('search-input').addEventListener('keydown', e => {
       if (e.key === 'Enter') doSearch();
     });
@@ -599,6 +635,8 @@
     const name = document.getElementById('name-input').value.trim();
     if (!name) return;
 
+    const password = document.getElementById('password-input').value || null;
+
     const btn = document.getElementById('join-btn');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span>';
@@ -607,8 +645,17 @@
       const res = await fetch(`${BASE}/api/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, password }),
       });
+      if (res.status === 403) {
+        // Wrong or missing password — show the password field
+        document.getElementById('password-wrap').style.display = 'block';
+        document.getElementById('password-input').focus();
+        const el = document.getElementById('join-error');
+        el.textContent = 'This party requires a password.';
+        el.style.display = 'block';
+        return;
+      }
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       guestToken = data.guest_token;
@@ -658,6 +705,9 @@
         } else if (msg.type === 'history_update' && Array.isArray(msg.tracks)) {
           history = msg.tracks;
           renderHistory();
+        } else if (msg.type === 'spotify_queue_update' && Array.isArray(msg.tracks)) {
+          spotifyQueue = msg.tracks;
+          renderQueue();
         }
       } catch (_) {}
     };
@@ -834,9 +884,11 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ track_id: trackId, guest_token: guestToken }),
       });
-      if (res.status === 409) {
-        toast('Already in queue', 'error');
-        btn.innerHTML = '✓';
+      if (res.status === 409 || res.status === 422) {
+        const msg = await res.text();
+        toast(msg || 'Cannot add this track', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '+';
         return;
       }
       if (!res.ok) throw new Error(await res.text());
@@ -856,32 +908,50 @@
     badge.textContent = queue.length ? `(${queue.length})` : '';
 
     const container = document.getElementById('queue-list');
+
+    let html = '';
+
     if (!queue.length) {
-      container.innerHTML = '<div class="empty-state"><div class="icon">🎶</div><p>The queue is empty. Be the first to add a song!</p></div>';
-      return;
+      html += '<div class="empty-state"><div class="icon">🎶</div><p>The queue is empty. Be the first to add a song!</p></div>';
+    } else {
+      html += queue.map((entry, i) => {
+        const myVote = myVotes[entry.track.id];
+        return `
+        <div class="queue-item">
+          <div class="queue-pos">${i + 1}</div>
+          <img class="track-art" src="${entry.track.album_art_url || ''}" alt="" onerror="this.style.display='none'" />
+          <div class="track-info">
+            <div class="track-title">${esc(entry.track.title)}</div>
+            <div class="track-sub">${esc(entry.track.artist)}</div>
+          </div>
+          <div class="vote-ctrl">
+            <button class="vote-btn ${myVote === 'up' ? 'voted-up' : ''}"
+                    onclick="castVote('${entry.track.id}', 'up')">▲</button>
+            <div class="vote-count" style="color:${entry.votes > 0 ? '#1db954' : entry.votes < 0 ? '#e74c3c' : '#b3b3b3'}">
+              ${entry.votes > 0 ? '+' : ''}${entry.votes}
+            </div>
+            <button class="vote-btn ${myVote === 'down' ? 'voted-down' : ''}"
+                    onclick="castVote('${entry.track.id}', 'down')">▼</button>
+          </div>
+        </div>`;
+      }).join('');
     }
 
-    container.innerHTML = queue.map((entry, i) => {
-      const myVote = myVotes[entry.track.id];
-      return `
-      <div class="queue-item">
-        <div class="queue-pos">${i + 1}</div>
-        <img class="track-art" src="${entry.track.album_art_url || ''}" alt="" onerror="this.style.display='none'" />
-        <div class="track-info">
-          <div class="track-title">${esc(entry.track.title)}</div>
-          <div class="track-sub">${esc(entry.track.artist)}</div>
-        </div>
-        <div class="vote-ctrl">
-          <button class="vote-btn ${myVote === 'up' ? 'voted-up' : ''}"
-                  onclick="castVote('${entry.track.id}', 'up')">▲</button>
-          <div class="vote-count" style="color:${entry.votes > 0 ? '#1db954' : entry.votes < 0 ? '#e74c3c' : '#b3b3b3'}">
-            ${entry.votes > 0 ? '+' : ''}${entry.votes}
+    const partyIds = new Set(queue.map(e => e.track.id));
+    const filteredAutoplay = spotifyQueue.filter(t => !partyIds.has(t.id));
+    if (filteredAutoplay.length > 0) {
+      html += `<div class="spotify-autoplay-divider">Spotify Autoplay</div>`;
+      html += filteredAutoplay.slice(0, 10).map(track => `
+        <div class="autoplay-item">
+          <img class="track-art" src="${track.album_art_url || ''}" alt="" onerror="this.style.display='none'" />
+          <div class="track-info">
+            <div class="track-title">${esc(track.title)}</div>
+            <div class="track-sub">${esc(track.artist)}</div>
           </div>
-          <button class="vote-btn ${myVote === 'down' ? 'voted-down' : ''}"
-                  onclick="castVote('${entry.track.id}', 'down')">▼</button>
-        </div>
-      </div>`;
-    }).join('');
+        </div>`).join('');
+    }
+
+    container.innerHTML = html;
   }
 
   async function castVote(trackId, direction) {

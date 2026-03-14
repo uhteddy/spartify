@@ -20,10 +20,12 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
         let queue = state.queue.read().await.clone();
         let playback = state.playback_cache.read().await.clone();
         let past = state.past_tracks.read().await.clone();
+        let spotify_queue = state.spotify_queue_cache.read().await.clone();
         vec![
             serde_json::json!({"type": "queue_update", "queue": queue}).to_string(),
             serde_json::json!({"type": "playback_update", "playback": playback}).to_string(),
             serde_json::json!({"type": "history_update", "tracks": past}).to_string(),
+            serde_json::json!({"type": "spotify_queue_update", "tracks": spotify_queue}).to_string(),
         ]
     };
 

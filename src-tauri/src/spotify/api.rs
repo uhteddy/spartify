@@ -22,6 +22,8 @@ struct SpotifyTrack {
     artists: Vec<SpotifyArtist>,
     album: SpotifyAlbum,
     duration_ms: u64,
+    #[serde(default)]
+    explicit: bool,
 }
 
 #[derive(Deserialize)]
@@ -82,6 +84,7 @@ pub async fn search_tracks(query: &str, access_token: &str) -> anyhow::Result<Ve
                 album: t.album.name,
                 album_art_url,
                 duration_ms: t.duration_ms,
+                explicit: t.explicit,
             }
         })
         .collect();
@@ -100,6 +103,8 @@ pub async fn get_track(track_id: &str, access_token: &str) -> anyhow::Result<Tra
         artists: Vec<SpotifyArtist>,
         album: SpotifyAlbum,
         duration_ms: u64,
+        #[serde(default)]
+        explicit: bool,
     }
 
     let client = reqwest::Client::new();
@@ -136,6 +141,7 @@ pub async fn get_track(track_id: &str, access_token: &str) -> anyhow::Result<Tra
         album: t.album.name,
         album_art_url,
         duration_ms: t.duration_ms,
+        explicit: t.explicit,
     })
 }
 
@@ -450,6 +456,7 @@ pub async fn get_spotify_queue(access_token: &str) -> anyhow::Result<Vec<Track>>
                 album: t.album.name,
                 album_art_url,
                 duration_ms: t.duration_ms,
+                explicit: t.explicit,
             }
         })
         .collect();

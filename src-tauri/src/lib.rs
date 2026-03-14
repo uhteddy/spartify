@@ -55,6 +55,8 @@ pub fn run() {
             commands::set_sdk_device_id,
             commands::get_devices,
             commands::transfer_playback,
+            commands::get_party_settings,
+            commands::save_party_settings,
             commands::spotify_play,
             commands::spotify_pause,
             commands::spotify_skip_next,

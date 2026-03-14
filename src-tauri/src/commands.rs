@@ -5,7 +5,7 @@ use tauri::AppHandle;
 
 use crate::server::routes::broadcast_queue_update;
 use crate::spotify::{api, auth};
-use crate::state::{AppConfig, AppState, GuestSession, PlaybackState, QueueEntry, SpotifyAuth, Track};
+use crate::state::{AppConfig, AppState, GuestSession, PartySettings, PlaybackState, QueueEntry, SpotifyAuth, Track};
 
 // ─── Spotify auth ─────────────────────────────────────────────────────────────
 
@@ -137,6 +137,8 @@ pub async fn stop_party(state: tauri::State<'_, AppState>) -> Result<(), String>
     state.queue.write().await.clear();
     state.guests.write().await.clear();
     state.votes.write().await.clear();
+    *state.playback_cache.write().await = None;
+    *state.server_port.write().await = None;
 
     Ok(())
 }
@@ -150,56 +152,10 @@ pub async fn get_queue(state: tauri::State<'_, AppState>) -> Result<Vec<QueueEnt
 
 /// Pops the top track from the queue and sends it to Spotify.
 #[tauri::command]
-pub async fn play_next(state: tauri::State<'_, AppState>) -> Result<(), String> {
-    let entry = {
-        let queue = state.queue.read().await;
-        queue.first().cloned()
-    };
-
-    let Some(entry) = entry else {
-        return Err("Queue is empty".into());
-    };
-
-    let access_token = {
-        let spotify = state.spotify.read().await;
-        match &*spotify {
-            Some(auth) => auth.access_token.clone(),
-            None => return Err("Spotify not connected".into()),
-        }
-    };
-
-    let device_id = state.active_device_id.read().await.clone();
-    api::add_to_spotify_queue(&entry.track.uri, device_id.as_deref(), &access_token)
-        .await
-        .map_err(|e| e.to_string())?;
-
-    // Remove from our queue
-    {
-        let mut queue = state.queue.write().await;
-        if !queue.is_empty() {
-            queue.remove(0);
-        }
-    }
-
-    // Clear votes for this track
-    {
-        let track_id = entry.track.id.clone();
-        let mut votes = state.votes.write().await;
-        votes.retain(|(tid, _), _| tid != &track_id);
-    }
-
-    // Record in history (newest first, cap at 30)
-    {
-        let mut past = state.past_tracks.write().await;
-        past.insert(0, entry.track.clone());
-        past.truncate(30);
-        let past_snap = past.clone();
-        let _ = state.ws_tx.send(
-            serde_json::json!({"type": "history_update", "tracks": past_snap}).to_string(),
-        );
-    }
-
-    broadcast_queue_update(&*state).await;
+pub async fn play_next(_state: tauri::State<'_, AppState>) -> Result<(), String> {
+    // Songs are now auto-pushed to Spotify when requested and auto-retired from
+    // the party queue when they start playing. This command is kept for API
+    // compatibility but is a no-op.
     Ok(())
 }
 
@@ -332,6 +288,24 @@ pub async fn transfer_playback(
         .map_err(|e| e.to_string())?;
 
     *state.active_device_id.write().await = Some(device_id);
+    Ok(())
+}
+
+// ─── Party settings ───────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub async fn get_party_settings(state: tauri::State<'_, AppState>) -> Result<PartySettings, String> {
+    Ok(state.config.read().await.party_settings.clone())
+}
+
+#[tauri::command]
+pub async fn save_party_settings(
+    settings: PartySettings,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    let mut config = state.config.write().await;
+    config.party_settings = settings;
+    save_config(&config);
     Ok(())
 }
 

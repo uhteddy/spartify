@@ -103,6 +103,17 @@
   let updateVersion = $state<string | null>(null);
   let updateInstalling = $state(false);
 
+  // Stop party confirmation (replaces window.confirm which Tauri blocks)
+  let confirmingStop = $state(false);
+
+  // Settings panel
+  let showSettings = $state(false);
+  let settingsPassword = $state('');
+  let settingsRequestsPerGuest = $state(0);
+  let settingsMaxQueueSize = $state(0);
+  let settingsBlockExplicit = $state(false);
+  let settingsSaving = $state(false);
+
   // SDK & device picker
   let sdkPlayer = $state<SpotifyPlayer | null>(null);
   let sdkDeviceId = $state<string | null>(null);
@@ -112,6 +123,10 @@
 
   // Spotify's actual upcoming queue (separate from Spartify party queue)
   let spotifyQueue = $state<Track[]>([]);
+  let filteredSpotifyQueue = $derived.by(() => {
+    const partyIds = new Set(queue.map(e => e.track.id));
+    return spotifyQueue.filter(t => !partyIds.has(t.id));
+  });
   let controlLoading = $state(false);
 
   // Progress interpolation
@@ -138,6 +153,12 @@
   // ── Lifecycle ──────────────────────────────────────────────────────────────
   onMount(async () => {
     invoke<string | null>('check_for_updates').then(v => { updateVersion = v; }).catch(() => {});
+    invoke<{ join_password: string | null; requests_per_guest: number; max_queue_size: number; block_explicit: boolean }>('get_party_settings').then(s => {
+      settingsPassword = s.join_password ?? '';
+      settingsRequestsPerGuest = s.requests_per_guest;
+      settingsMaxQueueSize = s.max_queue_size;
+      settingsBlockExplicit = s.block_explicit;
+    }).catch(() => {});
 
     // Restore party state if already active
     const url = await invoke<string | null>('get_tunnel_url');
@@ -329,7 +350,8 @@
   }
 
   async function stopParty() {
-    if (!confirm('Stop the party? All guests will be disconnected.')) return;
+    if (!confirmingStop) { confirmingStop = true; return; }
+    confirmingStop = false;
     await invoke('stop_party');
     partyActive = false;
     tunnelUrl = '';
@@ -337,8 +359,28 @@
     qrDataUrl = '';
     queue = [];
     guests = [];
+    spotifyQueue = [];
     disconnectWebSocket(false);
     wsDestroyed = false;
+  }
+
+  async function saveSettings() {
+    settingsSaving = true;
+    try {
+      await invoke('save_party_settings', {
+        settings: {
+          join_password: settingsPassword.trim() || null,
+          requests_per_guest: settingsRequestsPerGuest,
+          max_queue_size: settingsMaxQueueSize,
+          block_explicit: settingsBlockExplicit,
+        }
+      });
+      showSettings = false;
+    } catch (e: unknown) {
+      error = String(e);
+    } finally {
+      settingsSaving = false;
+    }
   }
 
   // ── Devices ────────────────────────────────────────────────────────────────
@@ -482,7 +524,10 @@
   <div class="layout">
     <!-- ── Left panel: share + guests ── -->
     <aside class="sidebar">
-      <div class="logo">Spar<span>tify</span></div>
+      <div class="sidebar-top">
+        <div class="logo">Spar<span>tify</span></div>
+        <button class="gear-btn" onclick={() => { showSettings = !showSettings; confirmingStop = false; }} title="Party settings">⚙</button>
+      </div>
 
       {#if !partyActive}
         <div class="start-section">
@@ -511,7 +556,17 @@
           <p class="hint">Guests scan this QR or open the URL to join.</p>
         </div>
 
-        <button class="btn-stop" onclick={stopParty}>■ Stop Party</button>
+        {#if confirmingStop}
+          <div class="confirm-stop">
+            <span>Stop the party?</span>
+            <div class="confirm-btns">
+              <button class="btn-confirm-yes" onclick={stopParty}>Stop</button>
+              <button class="btn-confirm-no" onclick={() => confirmingStop = false}>Cancel</button>
+            </div>
+          </div>
+        {:else}
+          <button class="btn-stop" onclick={stopParty}>■ Stop Party</button>
+        {/if}
       {/if}
 
       <!-- Now playing -->
@@ -704,11 +759,11 @@
         {/if}
 
         <!-- Spotify's actual upcoming queue -->
-        {#if spotifyQueue.length > 0}
+        {#if filteredSpotifyQueue.length > 0}
           <div class="spotify-queue-divider">
-            <span>Spotify Queue</span>
+            <span>Spotify Autoplay</span>
           </div>
-          {#each spotifyQueue.slice(0, 10) as track (track.id)}
+          {#each filteredSpotifyQueue.slice(0, 10) as track (track.id)}
             <div class="queue-item spotify-q-item">
               {#if track.album_art_url}
                 <img class="art" src={track.album_art_url} alt="" />
@@ -725,6 +780,83 @@
         {/if}
       </div>
     </main>
+
+    <!-- ── Settings panel ── -->
+    {#if showSettings}
+      <div class="settings-overlay" onclick={() => showSettings = false} role="presentation"></div>
+      <div class="settings-panel">
+        <div class="settings-header">
+          <h2>Party Settings</h2>
+          <button class="settings-close" onclick={() => showSettings = false}>✕</button>
+        </div>
+
+        <div class="settings-body">
+          <div class="setting-group">
+            <label class="setting-label" for="s-password">Join Password</label>
+            <p class="setting-hint">Guests must enter this to join. Leave blank for no password.</p>
+            <input
+              id="s-password"
+              type="text"
+              class="setting-input"
+              placeholder="No password"
+              bind:value={settingsPassword}
+              autocomplete="off"
+            />
+          </div>
+
+          <div class="setting-group">
+            <label class="setting-label" for="s-requests">Requests Per Guest</label>
+            <p class="setting-hint">Max songs one guest can have in the queue at once. 0 = unlimited.</p>
+            <input
+              id="s-requests"
+              type="number"
+              class="setting-input"
+              min="0"
+              max="20"
+              bind:value={settingsRequestsPerGuest}
+            />
+          </div>
+
+          <div class="setting-group">
+            <label class="setting-label" for="s-maxqueue">Max Queue Size</label>
+            <p class="setting-hint">Total number of songs allowed in the queue. 0 = unlimited.</p>
+            <input
+              id="s-maxqueue"
+              type="number"
+              class="setting-input"
+              min="0"
+              max="200"
+              bind:value={settingsMaxQueueSize}
+            />
+          </div>
+
+          <div class="setting-group setting-toggle">
+            <div>
+              <div class="setting-label">Block Explicit Tracks</div>
+              <p class="setting-hint">Reject songs marked explicit by Spotify.</p>
+            </div>
+            <button
+              class="toggle-btn"
+              class:on={settingsBlockExplicit}
+              onclick={() => settingsBlockExplicit = !settingsBlockExplicit}
+              role="switch"
+              aria-checked={settingsBlockExplicit}
+            >
+              <span class="toggle-knob"></span>
+            </button>
+          </div>
+        </div>
+
+        <div class="settings-footer">
+          {#if error}
+            <div class="error" style="margin-bottom:8px">{error}</div>
+          {/if}
+          <button class="btn-primary" onclick={saveSettings} disabled={settingsSaving}>
+            {settingsSaving ? 'Saving…' : 'Save Settings'}
+          </button>
+        </div>
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -795,14 +927,32 @@
     overflow-y: auto;
   }
 
+  .sidebar-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
   .logo {
     font-size: 1.6rem;
     font-weight: 800;
     letter-spacing: -0.5px;
     color: #fff;
-    flex-shrink: 0;
   }
   .logo span { color: #1db954; }
+
+  .gear-btn {
+    background: none;
+    border: none;
+    color: #555;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 6px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .gear-btn:hover { color: #ccc; background: #282828; }
 
   .hint {
     color: #777;
@@ -1366,4 +1516,161 @@
     opacity: 0.6;
   }
   .spotify-q-item:hover { opacity: 0.85; }
+
+  /* Stop confirmation */
+  .confirm-stop {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: rgba(231,76,60,0.1);
+    border: 1px solid rgba(231,76,60,0.3);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .confirm-stop span { font-size: 0.85rem; color: #e74c3c; font-weight: 600; }
+  .confirm-btns { display: flex; gap: 8px; }
+  .btn-confirm-yes {
+    flex: 1;
+    background: #e74c3c;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 7px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .btn-confirm-yes:hover { background: #c0392b; }
+  .btn-confirm-no {
+    flex: 1;
+    background: #333;
+    color: #ccc;
+    border: none;
+    border-radius: 6px;
+    padding: 7px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-confirm-no:hover { background: #3a3a3a; color: #fff; }
+
+  /* Settings */
+  .settings-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 50;
+  }
+
+  .settings-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 340px;
+    background: #1a1a1a;
+    border-left: 1px solid #2a2a2a;
+    z-index: 51;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid #2a2a2a;
+    flex-shrink: 0;
+  }
+
+  .settings-header h2 { font-size: 1.1rem; font-weight: 700; }
+
+  .settings-close {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  .settings-close:hover { color: #fff; background: #333; }
+
+  .settings-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .setting-group { display: flex; flex-direction: column; gap: 6px; }
+  .setting-group.setting-toggle { flex-direction: row; align-items: center; justify-content: space-between; gap: 16px; }
+  .setting-group.setting-toggle > div { flex: 1; min-width: 0; }
+
+  .setting-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #e0e0e0;
+  }
+
+  .setting-hint {
+    font-size: 0.75rem;
+    color: #666;
+    line-height: 1.4;
+  }
+
+  .setting-input {
+    background: #282828;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.9rem;
+    padding: 9px 12px;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.15s;
+    -moz-appearance: textfield;
+  }
+  .setting-input:focus { border-color: #1db954; }
+  .setting-input::placeholder { color: #555; }
+  .setting-input::-webkit-outer-spin-button,
+  .setting-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+  /* Toggle switch */
+  .toggle-btn {
+    position: relative;
+    width: 42px;
+    height: 24px;
+    background: #333;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s;
+    padding: 0;
+  }
+  .toggle-btn.on { background: #1db954; }
+
+  .toggle-knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    pointer-events: none;
+  }
+  .toggle-btn.on .toggle-knob { transform: translateX(18px); }
+
+  .settings-footer {
+    padding: 16px 20px;
+    border-top: 1px solid #2a2a2a;
+    flex-shrink: 0;
+  }
 </style>

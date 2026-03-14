@@ -53,6 +53,12 @@ pub async fn get_history(State(state): State<AppState>) -> Json<Vec<Track>> {
     Json(state.past_tracks.read().await.clone())
 }
 
+// ─── GET /api/spotify-queue ───────────────────────────────────────────────────
+
+pub async fn get_spotify_queue(State(state): State<AppState>) -> Json<Vec<Track>> {
+    Json(state.spotify_queue_cache.read().await.clone())
+}
+
 // ─── GET /api/queue ───────────────────────────────────────────────────────────
 
 #[derive(Serialize)]
@@ -70,6 +76,7 @@ pub async fn get_queue(State(state): State<AppState>) -> Json<QueueResponse> {
 #[derive(Deserialize)]
 pub struct JoinBody {
     name: String,
+    password: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -81,10 +88,21 @@ pub struct JoinResponse {
 pub async fn join(
     State(state): State<AppState>,
     Json(body): Json<JoinBody>,
-) -> Result<Json<JoinResponse>, StatusCode> {
+) -> Result<Json<JoinResponse>, (StatusCode, String)> {
     let name = body.name.trim().to_string();
     if name.is_empty() || name.len() > 32 {
-        return Err(StatusCode::BAD_REQUEST);
+        return Err((StatusCode::BAD_REQUEST, "Name must be 1–32 characters".into()));
+    }
+
+    // Check password if one is set
+    let settings = state.config.read().await.party_settings.clone();
+    if let Some(ref required) = settings.join_password {
+        if !required.is_empty() {
+            match body.password.as_deref() {
+                Some(p) if p == required.as_str() => {}
+                _ => return Err((StatusCode::FORBIDDEN, "Incorrect party password".into())),
+            }
+        }
     }
 
     let guest_id = Uuid::new_v4();
@@ -157,10 +175,24 @@ pub async fn request_track(
         return Err((StatusCode::UNAUTHORIZED, "Invalid guest token".into()));
     }
 
+    let settings = state.config.read().await.party_settings.clone();
+
     {
         let queue = state.queue.read().await;
+
         if queue.iter().any(|e| e.track.id == body.track_id) {
             return Err((StatusCode::CONFLICT, "Track already in queue".into()));
+        }
+
+        if settings.max_queue_size > 0 && queue.len() as u32 >= settings.max_queue_size {
+            return Err((StatusCode::CONFLICT, format!("Queue is full (max {})", settings.max_queue_size)));
+        }
+
+        if settings.requests_per_guest > 0 {
+            let guest_count = queue.iter().filter(|e| e.requested_by == guest_id).count();
+            if guest_count as u32 >= settings.requests_per_guest {
+                return Err((StatusCode::CONFLICT, format!("You can only have {} song(s) in the queue at once", settings.requests_per_guest)));
+            }
         }
     }
 
@@ -180,6 +212,17 @@ pub async fn request_track(
     let track = api::get_track(&body.track_id, &access_token)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if settings.block_explicit && track.explicit {
+        return Err((StatusCode::UNPROCESSABLE_ENTITY, "Explicit tracks are not allowed in this party".into()));
+    }
+
+    // Push to Spotify's actual queue immediately so the song plays without
+    // the host needing to press "Play Next".
+    let device_id = state.active_device_id.read().await.clone();
+    if let Err(e) = api::add_to_spotify_queue(&track.uri, device_id.as_deref(), &access_token).await {
+        eprintln!("Warning: could not auto-push track to Spotify queue: {}", e);
+    }
 
     let entry = QueueEntry {
         track,

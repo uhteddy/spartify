@@ -14,6 +14,7 @@ pub struct Track {
     pub album: String,
     pub album_art_url: Option<String>,
     pub duration_ms: u64,
+    pub explicit: bool,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -40,10 +41,24 @@ pub struct SpotifyAuth {
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, Default)]
+pub struct PartySettings {
+    /// Password guests must enter to join. None = no password.
+    pub join_password: Option<String>,
+    /// Max songs a single guest can have in the queue at once. 0 = unlimited.
+    pub requests_per_guest: u32,
+    /// Max total queue length. 0 = unlimited.
+    pub max_queue_size: u32,
+    /// Reject tracks marked explicit by Spotify.
+    pub block_explicit: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, Default)]
 pub struct AppConfig {
     pub spotify_client_id: Option<String>,
     pub redirect_uri: Option<String>,
     pub refresh_token: Option<String>,
+    #[serde(default)]
+    pub party_settings: PartySettings,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -78,6 +93,8 @@ pub struct AppStateInner {
     pub playback_cache: RwLock<Option<PlaybackState>>,
     /// Recently played tracks (newest first, capped at 30).
     pub past_tracks: RwLock<Vec<Track>>,
+    /// Spotify's upcoming autoplay queue, refreshed every 3 s by the background poller.
+    pub spotify_queue_cache: RwLock<Vec<Track>>,
 }
 
 #[derive(Clone)]
@@ -101,6 +118,7 @@ impl AppState {
             oauth_code_tx: Mutex::new(None),
             playback_cache: RwLock::new(None),
             past_tracks: RwLock::new(Vec::new()),
+            spotify_queue_cache: RwLock::new(Vec::new()),
         }))
     }
 }
