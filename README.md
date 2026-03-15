@@ -45,7 +45,7 @@ Spartify is an open-source macOS desktop app that turns your Spotify account int
 
 Spartify is a [Tauri 2](https://tauri.app) desktop app: a Rust backend bundled with a [SvelteKit 5](https://kit.svelte.dev) frontend.
 
-When you start a party, the Rust backend spins up an embedded [axum](https://github.com/tokio-rs/axum) HTTP server on a random local port. A [bore](https://github.com/ekzhang/bore) TCP tunnel is launched as a bundled sidecar binary, creating a publicly accessible URL (e.g. `bore.pub:XXXXX`) that forwards to that local server. Guests open this URL in any browser and get served a self-contained HTML page.
+When you start a party, the Rust backend spins up an embedded [axum](https://github.com/tokio-rs/axum) HTTP server on a random local port. An [frp](https://github.com/fatedier/frp) tunnel is launched as a bundled sidecar binary, creating a publicly accessible subdomain URL (e.g. `abc123.spartify.app`) that forwards to that local server. Guests open this URL in any browser and get served a self-contained HTML page.
 
 The guest page communicates with the backend over WebSocket for real-time pushes (queue changes, playback updates, new songs starting) and over plain HTTP for actions (joining, searching, requesting, voting).
 
@@ -81,18 +81,18 @@ cd spartify
 # 2. Install JS dependencies
 bun install
 
-# 3. Build and install the bore sidecar binary
-cargo install bore-cli --locked
-cp ~/.cargo/bin/bore src-tauri/binaries/bore-aarch64-apple-darwin
-codesign -f -s - src-tauri/binaries/bore-aarch64-apple-darwin
+# 3. Download the frp sidecar binary
+# Download frp from https://github.com/fatedier/frp/releases and place the frpc binary at:
+cp /path/to/frpc src-tauri/binaries/frpc-aarch64-apple-darwin
+codesign -f -s - src-tauri/binaries/frpc-aarch64-apple-darwin
 
 # 4. Run in development mode
 bunx tauri dev
 ```
 
 > **Apple Silicon vs Intel:** The sidecar binary name must match your architecture.
-> - Apple Silicon: `bore-aarch64-apple-darwin`
-> - Intel Mac: `bore-x86_64-apple-darwin`
+> - Apple Silicon: `frpc-aarch64-apple-darwin`
+> - Intel Mac: `frpc-x86_64-apple-darwin`
 > - Check yours with: `rustc -vV | grep host`
 
 ### Building a release `.dmg`
@@ -127,7 +127,7 @@ No. Guests open a URL (or scan a QR code) in any modern mobile or desktop browse
 
 **Q: Is the party link accessible from outside my home network?**
 
-Yes. Spartify automatically creates a public tunnel via ftp to a subdomain at spartify.app so guests can join from anywhere, not just your local Wi-Fi.
+Yes. Spartify automatically creates a public tunnel to a subdomain at `spartify.app` so guests can join from anywhere, not just your local Wi-Fi.
 
 **Q: How do I prevent randos from joining?**
 
