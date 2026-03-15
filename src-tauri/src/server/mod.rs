@@ -65,6 +65,28 @@ pub async fn start_server(state: AppState) -> anyhow::Result<u16> {
                                     serde_json::json!({"type": "queue_update", "queue": queue_snap})
                                         .to_string(),
                                 );
+                            } else {
+                                // Track changed but wasn't in the party queue — still record in history.
+                                let track = crate::state::Track {
+                                    id: tid.clone(),
+                                    uri: format!("spotify:track:{}", tid),
+                                    title: playback.track_name.clone().unwrap_or_default(),
+                                    artist: playback.artist_name.clone().unwrap_or_default(),
+                                    album: String::new(),
+                                    album_art_url: playback.album_art_url.clone(),
+                                    duration_ms: playback.duration_ms.unwrap_or(0),
+                                    explicit: false,
+                                };
+                                let mut past = poll_state.past_tracks.write().await;
+                                if past.first().map(|t| &t.id) != Some(tid) {
+                                    past.insert(0, track);
+                                    past.truncate(30);
+                                    let snap = past.clone();
+                                    let _ = poll_state.ws_tx.send(
+                                        serde_json::json!({"type": "history_update", "tracks": snap})
+                                            .to_string(),
+                                    );
+                                }
                             }
                         }
                         last_track_id = current_id;
