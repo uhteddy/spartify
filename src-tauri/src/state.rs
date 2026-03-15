@@ -50,6 +50,10 @@ pub struct PartySettings {
     pub max_queue_size: u32,
     /// Reject tracks marked explicit by Spotify.
     pub block_explicit: bool,
+    /// Custom tunnel subdomain prefix (e.g. "myparty" → myparty.spartify.app).
+    /// None = random 8-char subdomain.
+    #[serde(default)]
+    pub tunnel_subdomain: Option<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, Default)]

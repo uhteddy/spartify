@@ -59,18 +59,40 @@ jobs:
       - name: Install frontend dependencies
         run: bun install
 
-      # Build bore from source (same toolchain, always matches target)
-      # and place it where Tauri expects the sidecar binary.
-      - name: Build bore sidecar
+      # Download the frpc binary for the target platform and place it where
+      # Tauri expects the sidecar binary.
+      - name: Download frpc sidecar
         shell: bash
         run: |
-          cargo install bore-cli --locked
-          mkdir -p src-tauri/binaries
+          FRP_VERSION="0.61.1"
           TARGET="${{ matrix.target }}"
+          mkdir -p src-tauri/binaries
+
+          if [[ "$TARGET" == *"aarch64-apple-darwin"* ]]; then
+            ARCHIVE="frp_${FRP_VERSION}_darwin_arm64.tar.gz"
+            BIN="frpc"
+          elif [[ "$TARGET" == *"x86_64-apple-darwin"* ]]; then
+            ARCHIVE="frp_${FRP_VERSION}_darwin_amd64.tar.gz"
+            BIN="frpc"
+          elif [[ "$TARGET" == *"x86_64-unknown-linux-gnu"* ]]; then
+            ARCHIVE="frp_${FRP_VERSION}_linux_amd64.tar.gz"
+            BIN="frpc"
+          elif [[ "$TARGET" == *"x86_64-pc-windows-msvc"* ]]; then
+            ARCHIVE="frp_${FRP_VERSION}_windows_amd64.zip"
+            BIN="frpc.exe"
+          fi
+
+          curl -sL "https://github.com/fatedier/frp/releases/download/v${FRP_VERSION}/${ARCHIVE}" -o frp.tar.gz
+
           if [[ "$TARGET" == *windows* ]]; then
-            cp "$HOME/.cargo/bin/bore.exe" "src-tauri/binaries/bore-${TARGET}.exe"
+            unzip -q frp.tar.gz
+            EXTRACTED_DIR="frp_${FRP_VERSION}_windows_amd64"
+            cp "${EXTRACTED_DIR}/frpc.exe" "src-tauri/binaries/frpc-${TARGET}.exe"
           else
-            cp "$HOME/.cargo/bin/bore" "src-tauri/binaries/bore-${TARGET}"
+            tar -xzf frp.tar.gz
+            EXTRACTED_DIR="${ARCHIVE%.tar.gz}"
+            cp "${EXTRACTED_DIR}/frpc" "src-tauri/binaries/frpc-${TARGET}"
+            chmod +x "src-tauri/binaries/frpc-${TARGET}"
           fi
 
       - name: Build and publish release

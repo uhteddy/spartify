@@ -107,8 +107,9 @@ pub async fn start_party(
         .await
         .map_err(|e| e.to_string())?;
 
-    // Start the bore tunnel
-    let (tunnel_url, child) = crate::tunnel::start_bore_tunnel(&app, port)
+    // Start the frp tunnel
+    let custom_subdomain = state.config.read().await.party_settings.tunnel_subdomain.clone();
+    let (tunnel_url, child) = crate::tunnel::start_frp_tunnel(&app, port, custom_subdomain)
         .await
         .map_err(|e| e.to_string())?;
 

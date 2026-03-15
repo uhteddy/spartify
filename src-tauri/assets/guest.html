@@ -684,7 +684,8 @@
 
   // ── WebSocket ──────────────────────────────────────────────────────────────
   function connectWS() {
-    const wsUrl = `ws://${window.location.host}/ws?token=${guestToken}`;
+    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const wsUrl = `${proto}://${window.location.host}/ws?token=${guestToken}`;
     ws = new WebSocket(wsUrl);
 
     ws.onopen = () => setWsDot(true);

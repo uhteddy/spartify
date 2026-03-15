@@ -112,6 +112,7 @@
   let settingsRequestsPerGuest = $state(0);
   let settingsMaxQueueSize = $state(0);
   let settingsBlockExplicit = $state(false);
+  let settingsSubdomain = $state('');
   let settingsSaving = $state(false);
 
   // SDK & device picker
@@ -153,11 +154,12 @@
   // ── Lifecycle ──────────────────────────────────────────────────────────────
   onMount(async () => {
     invoke<string | null>('check_for_updates').then(v => { updateVersion = v; }).catch(() => {});
-    invoke<{ join_password: string | null; requests_per_guest: number; max_queue_size: number; block_explicit: boolean }>('get_party_settings').then(s => {
+    invoke<{ join_password: string | null; requests_per_guest: number; max_queue_size: number; block_explicit: boolean; tunnel_subdomain: string | null }>('get_party_settings').then(s => {
       settingsPassword = s.join_password ?? '';
       settingsRequestsPerGuest = s.requests_per_guest;
       settingsMaxQueueSize = s.max_queue_size;
       settingsBlockExplicit = s.block_explicit;
+      settingsSubdomain = s.tunnel_subdomain ?? '';
     }).catch(() => {});
 
     // Restore party state if already active
@@ -373,6 +375,7 @@
           requests_per_guest: settingsRequestsPerGuest,
           max_queue_size: settingsMaxQueueSize,
           block_explicit: settingsBlockExplicit,
+          tunnel_subdomain: settingsSubdomain.trim() || null,
         }
       });
       showSettings = false;
@@ -844,6 +847,23 @@
             >
               <span class="toggle-knob"></span>
             </button>
+          </div>
+
+          <div class="setting-group">
+            <label class="setting-label" for="s-subdomain">Tunnel Subdomain</label>
+            <p class="setting-hint">Your party URL prefix. Leave blank for a random subdomain.</p>
+            <div class="subdomain-input-row">
+              <input
+                id="s-subdomain"
+                type="text"
+                class="setting-input"
+                placeholder="random"
+                bind:value={settingsSubdomain}
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <span class="subdomain-suffix">.spartify.app</span>
+            </div>
           </div>
         </div>
 
@@ -1639,6 +1659,26 @@
   .setting-input::placeholder { color: #555; }
   .setting-input::-webkit-outer-spin-button,
   .setting-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+  .subdomain-input-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  .subdomain-input-row .setting-input {
+    border-radius: 6px 0 0 6px;
+    flex: 1;
+  }
+  .subdomain-suffix {
+    background: #333;
+    border: 1px solid #333;
+    border-left: none;
+    border-radius: 0 6px 6px 0;
+    color: #888;
+    font-size: 0.85rem;
+    padding: 9px 10px;
+    white-space: nowrap;
+  }
 
   /* Toggle switch */
   .toggle-btn {
