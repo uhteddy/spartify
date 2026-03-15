@@ -127,7 +127,7 @@ No. Guests open a URL (or scan a QR code) in any modern mobile or desktop browse
 
 **Q: Is the party link accessible from outside my home network?**
 
-Yes. Spartify automatically creates a public tunnel via [bore](https://github.com/ekzhang/bore) so guests can join from anywhere, not just your local Wi-Fi.
+Yes. Spartify automatically creates a public tunnel via ftp to a subdomain at spartify.app so guests can join from anywhere, not just your local Wi-Fi.
 
 **Q: How do I prevent randos from joining?**
 
@@ -152,3 +152,6 @@ The codebase is cross-platform (Tauri supports Windows and Linux), but only macO
 **Q: How do I update Spartify?**
 
 Spartify checks for updates automatically on launch. If a new version is available you'll see an update banner at the top of the window. Click **Update** to download and install it.
+
+**Q: Does Spartify store any data about my Spotify account?**
+No data is ever stored or processed anywhere but your device. When you authenticate you are logged in with your own Spotify Developer app credentials, on your own device. Your account token and refresh token are stored locally on your device. Spartify runs a tunnel to your local machine so guests can connect, but no data is sent to any external server. Party state (queue, guests, votes, history) lives entirely in memory and is cleared when the party stops.
