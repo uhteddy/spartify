@@ -527,6 +527,26 @@
       updateInstalling = false;
     }
   }
+
+  let checkingUpdate = $state(false);
+  let noUpdateToast = $state(false);
+
+  async function checkForUpdates() {
+    checkingUpdate = true;
+    try {
+      const v = await invoke<string | null>('check_for_updates');
+      if (v) {
+        updateVersion = v;
+      } else {
+        noUpdateToast = true;
+        setTimeout(() => { noUpdateToast = false; }, 3000);
+      }
+    } catch (e) {
+      console.error('Update check failed', e);
+    } finally {
+      checkingUpdate = false;
+    }
+  }
 </script>
 
 <svelte:window onclick={handleDevicePickerOutsideClick} />
@@ -547,7 +567,12 @@
     <aside class="sidebar">
       <div class="sidebar-top">
         <div class="logo">Spar<span>tify</span></div>
-        <button class="gear-btn" onclick={() => { showSettings = !showSettings; confirmingStop = false; }} title="Party settings">⚙</button>
+        <div class="sidebar-actions">
+          <button class="gear-btn" onclick={checkForUpdates} disabled={checkingUpdate} title={noUpdateToast ? 'Up to date!' : 'Check for updates'}>
+            {checkingUpdate ? '…' : noUpdateToast ? '✓' : '↑'}
+          </button>
+          <button class="gear-btn" onclick={() => { showSettings = !showSettings; confirmingStop = false; }} title="Party settings">⚙</button>
+        </div>
       </div>
 
       {#if !partyActive}
@@ -1030,6 +1055,12 @@
     align-items: center;
     justify-content: space-between;
     flex-shrink: 0;
+  }
+
+  .sidebar-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
 
   .logo {
