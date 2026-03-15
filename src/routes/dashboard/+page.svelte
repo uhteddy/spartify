@@ -113,6 +113,9 @@
   let settingsMaxQueueSize = $state(0);
   let settingsBlockExplicit = $state(false);
   let settingsSubdomain = $state('');
+  let settingsAutoSkip = $state(false);
+  let settingsAutoSkipMode = $state('percentage');
+  let settingsAutoSkipThreshold = $state(50);
   let settingsSaving = $state(false);
 
   // SDK & device picker
@@ -154,12 +157,15 @@
   // ── Lifecycle ──────────────────────────────────────────────────────────────
   onMount(async () => {
     invoke<string | null>('check_for_updates').then(v => { updateVersion = v; }).catch(() => {});
-    invoke<{ join_password: string | null; requests_per_guest: number; max_queue_size: number; block_explicit: boolean; tunnel_subdomain: string | null }>('get_party_settings').then(s => {
+    invoke<{ join_password: string | null; requests_per_guest: number; max_queue_size: number; block_explicit: boolean; tunnel_subdomain: string | null; auto_skip_enabled: boolean; auto_skip_mode: string; auto_skip_threshold: number }>('get_party_settings').then(s => {
       settingsPassword = s.join_password ?? '';
       settingsRequestsPerGuest = s.requests_per_guest;
       settingsMaxQueueSize = s.max_queue_size;
       settingsBlockExplicit = s.block_explicit;
       settingsSubdomain = s.tunnel_subdomain ?? '';
+      settingsAutoSkip = s.auto_skip_enabled;
+      settingsAutoSkipMode = s.auto_skip_mode ?? 'percentage';
+      settingsAutoSkipThreshold = s.auto_skip_threshold ?? 50;
     }).catch(() => {});
 
     // Restore party state if already active
@@ -376,6 +382,9 @@
           max_queue_size: settingsMaxQueueSize,
           block_explicit: settingsBlockExplicit,
           tunnel_subdomain: settingsSubdomain.trim() || null,
+          auto_skip_enabled: settingsAutoSkip,
+          auto_skip_mode: settingsAutoSkipMode,
+          auto_skip_threshold: settingsAutoSkipThreshold,
         }
       });
       showSettings = false;
@@ -878,6 +887,62 @@
               <span class="subdomain-suffix">.spartify.app</span>
             </div>
           </div>
+
+          <div class="settings-divider"></div>
+
+          <div class="setting-group setting-toggle">
+            <div>
+              <div class="setting-label">Auto-Skip Voting</div>
+              <p class="setting-hint">Let guests vote on the current song. Skip it automatically when the threshold is hit.</p>
+            </div>
+            <button
+              class="toggle-btn"
+              class:on={settingsAutoSkip}
+              onclick={() => settingsAutoSkip = !settingsAutoSkip}
+              role="switch"
+              aria-checked={settingsAutoSkip}
+            >
+              <span class="toggle-knob"></span>
+            </button>
+          </div>
+
+          {#if settingsAutoSkip}
+            <div class="setting-group">
+              <label class="setting-label" for="s-skip-mode">Skip Trigger</label>
+              <p class="setting-hint">How to measure when to skip.</p>
+              <div class="skip-mode-row">
+                <button
+                  class="mode-btn"
+                  class:active={settingsAutoSkipMode === 'percentage'}
+                  onclick={() => settingsAutoSkipMode = 'percentage'}
+                >% of guests</button>
+                <button
+                  class="mode-btn"
+                  class:active={settingsAutoSkipMode === 'count'}
+                  onclick={() => settingsAutoSkipMode = 'count'}
+                ># of downvotes</button>
+              </div>
+            </div>
+
+            <div class="setting-group">
+              <label class="setting-label" for="s-skip-threshold">
+                {settingsAutoSkipMode === 'percentage' ? 'Downvote Percentage (%)' : 'Downvote Count'}
+              </label>
+              <p class="setting-hint">
+                {settingsAutoSkipMode === 'percentage'
+                  ? 'Skip when this % of guests have downvoted the current song.'
+                  : 'Skip when this many guests have downvoted the current song.'}
+              </p>
+              <input
+                id="s-skip-threshold"
+                type="number"
+                class="setting-input"
+                min={settingsAutoSkipMode === 'percentage' ? 1 : 1}
+                max={settingsAutoSkipMode === 'percentage' ? 100 : 100}
+                bind:value={settingsAutoSkipThreshold}
+              />
+            </div>
+          {/if}
         </div>
 
         <div class="settings-footer">
@@ -1712,6 +1777,32 @@
     padding: 9px 10px;
     white-space: nowrap;
   }
+
+  .settings-divider {
+    height: 1px;
+    background: #2a2a2a;
+    margin: 4px 0;
+  }
+
+  .skip-mode-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 2px;
+  }
+
+  .mode-btn {
+    flex: 1;
+    padding: 8px 10px;
+    background: #2a2a2a;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #888;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .mode-btn.active { border-color: #1db954; color: #1db954; background: rgba(29,185,84,0.08); }
+  .mode-btn:hover:not(.active) { border-color: #555; color: #ccc; }
 
   /* Toggle switch */
   .toggle-btn {

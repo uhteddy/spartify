@@ -57,6 +57,23 @@ pub struct PartySettings {
     /// None = random 8-char subdomain.
     #[serde(default)]
     pub tunnel_subdomain: Option<String>,
+    /// Allow guests to vote on the currently playing song to trigger auto-skip.
+    #[serde(default)]
+    pub auto_skip_enabled: bool,
+    /// "percentage" = skip when X% of guests downvote; "count" = skip at X downvotes.
+    #[serde(default = "default_auto_skip_mode")]
+    pub auto_skip_mode: String,
+    /// Threshold value for auto-skip (percentage 0–100 or raw count).
+    #[serde(default = "default_auto_skip_threshold")]
+    pub auto_skip_threshold: f32,
+}
+
+fn default_auto_skip_mode() -> String {
+    "percentage".to_string()
+}
+
+fn default_auto_skip_threshold() -> f32 {
+    50.0
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, Default)]

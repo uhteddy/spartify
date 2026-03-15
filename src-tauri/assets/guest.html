@@ -522,6 +522,11 @@
       </div>
       <div class="np-right">
         <div class="np-status" id="np-status">▶ Playing</div>
+        <div id="np-vote-ctrl" style="display:none;align-items:center;gap:4px;margin-top:2px;">
+          <button class="vote-btn" id="np-vote-down" onclick="castCurrentVote('down')" title="Skip vote">▼</button>
+          <span class="vote-count" id="np-vote-count" style="min-width:18px;text-align:center;font-size:0.75rem;">0</span>
+          <button class="vote-btn" id="np-vote-up" onclick="castCurrentVote('up')" title="Good song">▲</button>
+        </div>
         <a class="np-open-btn" id="np-open-btn" href="#" target="_blank" rel="noopener">
           Open ↗
         </a>
@@ -615,6 +620,7 @@
   let myVotes     = {};
   let ws          = null;
   let searchTimer = null;
+  let autoSkipEnabled = false;
 
   // Playback interpolation
   let pbIsPlaying    = false;
@@ -643,12 +649,13 @@
       }
     }
 
-    // Fetch party info to show/hide password field
+    // Fetch party info to show/hide password field and configure features
     try {
       const info = await fetch(`${BASE}/api/info`).then(r => r.json());
       if (info.requires_password) {
         document.getElementById('password-input').style.display = '';
       }
+      autoSkipEnabled = !!info.auto_skip_enabled;
     } catch (_) {}
 
     if (guestToken && guestName) {
@@ -822,6 +829,15 @@
       openBtn.style.display = 'inline-flex';
     } else {
       openBtn.style.display = 'none';
+    }
+
+    // Show/refresh skip-vote control
+    const voteCtrl = document.getElementById('np-vote-ctrl');
+    if (autoSkipEnabled && pb.track_id) {
+      voteCtrl.style.display = 'flex';
+      renderNowPlayingVotes(pb.track_id);
+    } else {
+      voteCtrl.style.display = 'none';
     }
 
     document.getElementById('np-duration').textContent = fmtDuration(pbDurationMs);
@@ -1029,6 +1045,21 @@
     } catch (err) {
       toast('Vote failed: ' + err.message, 'error');
     }
+  }
+
+  // ── Now-playing vote ───────────────────────────────────────────────────────
+  async function castCurrentVote(direction) {
+    if (!pbTrackId) return;
+    await castVote(pbTrackId, direction);
+    renderNowPlayingVotes(pbTrackId);
+  }
+
+  function renderNowPlayingVotes(trackId) {
+    const myVote = myVotes[trackId];
+    document.getElementById('np-vote-up').className =
+      'vote-btn' + (myVote === 'up' ? ' voted-up' : '');
+    document.getElementById('np-vote-down').className =
+      'vote-btn' + (myVote === 'down' ? ' voted-down' : '');
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────

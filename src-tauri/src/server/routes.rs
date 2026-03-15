@@ -57,6 +57,7 @@ fn current_time() -> u64 {
 #[derive(Serialize)]
 pub struct PartyInfo {
     requires_password: bool,
+    auto_skip_enabled: bool,
 }
 
 pub async fn get_info(State(state): State<AppState>) -> Json<PartyInfo> {
@@ -65,7 +66,10 @@ pub async fn get_info(State(state): State<AppState>) -> Json<PartyInfo> {
         .join_password
         .as_deref()
         .map_or(false, |p| !p.is_empty());
-    Json(PartyInfo { requires_password })
+    Json(PartyInfo {
+        requires_password,
+        auto_skip_enabled: settings.auto_skip_enabled,
+    })
 }
 
 // ─── GET /api/playback ────────────────────────────────────────────────────────
@@ -294,6 +298,53 @@ pub async fn request_track(
     }
 
     broadcast_queue_update(&state).await;
+
+    // ── Auto-skip check ────────────────────────────────────────────────────
+    let settings = state.config.read().await.party_settings.clone();
+    if settings.auto_skip_enabled {
+        // Only trigger if the voted track is the currently playing one.
+        let is_current = state
+            .playback_cache
+            .read()
+            .await
+            .as_ref()
+            .and_then(|pb| pb.track_id.as_deref().map(|id| id == body.track_id))
+            .unwrap_or(false);
+
+        if is_current {
+            let downvotes = state
+                .votes
+                .read()
+                .await
+                .iter()
+                .filter(|((tid, _), &v)| tid == &body.track_id && v < 0)
+                .count();
+
+            let guest_count = state.guests.read().await.len();
+
+            let should_skip = if settings.auto_skip_mode == "percentage" {
+                guest_count > 0
+                    && (downvotes as f32 / guest_count as f32 * 100.0)
+                        >= settings.auto_skip_threshold
+            } else {
+                downvotes as f32 >= settings.auto_skip_threshold
+            };
+
+            if should_skip {
+                let access_token = state
+                    .spotify
+                    .read()
+                    .await
+                    .as_ref()
+                    .map(|a| a.access_token.clone());
+                let device_id = state.active_device_id.read().await.clone();
+                if let Some(token) = access_token {
+                    let _ = api::skip_next(device_id.as_deref(), &token).await;
+                }
+            }
+        }
+    }
+
     Ok(StatusCode::OK)
 }
 
