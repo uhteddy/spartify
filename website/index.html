@@ -1,0 +1,3123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spartify — Party Music, Your Way</title>
+  <meta name="description" content="Turn your Spotify account into a party station. Guests join from any browser — no login, no app, no account. Free and open source.">
+  <meta property="og:title" content="Spartify — Party Music, Your Way">
+  <meta property="og:description" content="One host. Zero guest logins. Full control. Free and open source.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080808;
+      --surface: #111111;
+      --elevated: #1a1a1a;
+      --border: rgba(255,255,255,0.07);
+      --border-strong: rgba(255,255,255,0.12);
+      --green: #1DB954;
+      --green-bright: #22e65b;
+      --green-dim: rgba(29,185,84,0.18);
+      --green-subtle: rgba(29,185,84,0.06);
+      --white: #ffffff;
+      --gray-1: #e0e0e8;
+      --gray-2: #9898a8;
+      --gray-3: #505060;
+      --gray-4: #282830;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --radius-lg: 24px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 400;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Noise overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 1000;
+      opacity: 0.4;
+    }
+
+    /* ─── NAV ─────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 900;
+      padding: 0 40px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(8,8,8,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--white);
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 20px;
+      letter-spacing: -0.3px;
+    }
+
+    .nav-logo-icon {
+      width: 30px;
+      height: 30px;
+      background: var(--green);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--gray-2);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 400;
+      letter-spacing: 0.01em;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--white); }
+
+    .nav-cta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--gray-2);
+      border: 1px solid var(--border-strong);
+    }
+    .btn-ghost:hover { color: var(--white); border-color: var(--gray-3); background: var(--elevated); }
+
+    .btn-green {
+      background: var(--green);
+      color: #000;
+      font-weight: 600;
+    }
+    .btn-green:hover { background: var(--green-bright); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(29,185,84,0.35); }
+
+    .btn-lg {
+      padding: 14px 28px;
+      font-size: 16px;
+      border-radius: 12px;
+    }
+
+    /* ─── HERO ────────────────────────────── */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 80px 40px 60px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-orb {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .hero-orb-1 {
+      width: 700px; height: 700px;
+      background: radial-gradient(circle, rgba(29,185,84,0.12) 0%, transparent 70%);
+      top: -200px; right: -100px;
+    }
+    .hero-orb-2 {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(29,185,84,0.07) 0%, transparent 70%);
+      bottom: -100px; left: 200px;
+    }
+
+    .hero-grid-line {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: 80px 80px;
+      pointer-events: none;
+    }
+
+    .hero-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+      position: relative;
+      z-index: 2;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--green-dim);
+      border: 1px solid rgba(29,185,84,0.3);
+      border-radius: 100px;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--green-bright);
+      margin-bottom: 28px;
+    }
+
+    .hero-badge-dot {
+      width: 6px; height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.7); }
+    }
+
+    .hero-headline {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(40px, 5vw, 68px);
+      line-height: 1.05;
+      letter-spacing: -2px;
+      margin-bottom: 20px;
+    }
+
+    .hero-headline .accent { color: var(--green); }
+
+    .hero-sub {
+      font-size: 18px;
+      color: var(--gray-2);
+      font-weight: 300;
+      line-height: 1.7;
+      max-width: 500px;
+      margin-bottom: 36px;
+    }
+
+    .hero-sub strong { color: var(--white); font-weight: 500; }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .hero-note {
+      margin-top: 16px;
+      font-size: 13px;
+      color: var(--gray-3);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* ─── PHONE MOCKUP ─────────────────────── */
+    .phone-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    .phone-glow {
+      position: absolute;
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(29,185,84,0.2) 0%, transparent 70%);
+      border-radius: 50%;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .phone {
+      width: 280px;
+      height: 560px;
+      background: #121212;
+      border-radius: 44px;
+      border: 1px solid rgba(255,255,255,0.15);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 40px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1);
+      overflow: hidden;
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      font-family: 'Outfit', sans-serif;
+      animation: phone-float 6s ease-in-out infinite;
+    }
+
+    @keyframes phone-float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-12px); }
+    }
+
+    .phone-notch {
+      width: 100px; height: 24px;
+      background: #121212;
+      border-radius: 0 0 18px 18px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 3;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-top: none;
+      flex-shrink: 0;
+    }
+
+    .phone-status {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 20px 0;
+      font-size: 11px;
+      color: #b3b3b3;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+
+    /* Guest page header */
+    .p-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(18,18,18,0.96);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0;
+    }
+
+    .p-logo {
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #fff;
+      line-height: 1;
+    }
+    .p-logo span { color: #1db954; }
+
+    .p-ws-dot {
+      width: 7px; height: 7px;
+      background: #1db954;
+      border-radius: 50%;
+      margin-left: 2px;
+    }
+
+    .p-guest-badge {
+      margin-left: auto;
+      background: #282828;
+      border-radius: 500px;
+      padding: 3px 10px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #b3b3b3;
+    }
+
+    /* Now playing bar */
+    .p-np-bar {
+      background: #181818;
+      border-bottom: 1px solid #282828;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .p-np-progress-strip {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: #3e3e3e;
+    }
+
+    .p-np-progress-fill {
+      height: 100%;
+      background: #1db954;
+      width: 42%;
+      transition: width 0.4s linear;
+    }
+
+    .p-np-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+    }
+
+    .p-np-art {
+      width: 42px; height: 42px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .p-np-info { flex: 1; min-width: 0; }
+
+    .p-np-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .p-np-artist {
+      font-size: 10px;
+      color: #b3b3b3;
+      margin-top: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .p-np-open {
+      background: none;
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #b3b3b3;
+      font-size: 9px;
+      font-weight: 600;
+      font-family: 'Outfit', sans-serif;
+      padding: 4px 8px;
+      border-radius: 500px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* Tab content */
+    .p-tab-content {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: none;
+      scrollbar-width: none;
+    }
+    .p-tab-content::-webkit-scrollbar { display: none; }
+    .p-tab-content.active { display: block; }
+
+    /* Queue content */
+    .p-section-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #6a6a6a;
+      padding: 10px 12px 6px;
+    }
+
+    .p-queue-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 12px;
+      border-radius: 4px;
+    }
+    .p-queue-item:hover { background: rgba(255,255,255,0.05); }
+
+    .p-queue-pos {
+      width: 14px;
+      text-align: center;
+      font-size: 10px;
+      color: #6a6a6a;
+      font-weight: 400;
+      flex-shrink: 0;
+    }
+
+    .p-queue-art {
+      width: 38px; height: 38px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .p-queue-info { flex: 1; min-width: 0; }
+
+    .p-queue-track {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .p-queue-artist {
+      font-size: 10px;
+      color: #b3b3b3;
+      margin-top: 1px;
+    }
+
+    .p-vote-ctrl {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      flex-shrink: 0;
+    }
+
+    .p-vote-btn {
+      background: none;
+      border: none;
+      color: #6a6a6a;
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      transition: color 0.12s;
+    }
+    .p-vote-btn:hover { color: #b3b3b3; }
+    .p-vote-btn.voted-up { color: #1db954; }
+    .p-vote-btn.voted-down { color: #e91429; }
+
+    .p-vote-count {
+      font-size: 10px;
+      font-weight: 600;
+      min-width: 16px;
+      text-align: center;
+      color: #b3b3b3;
+      font-family: 'Outfit', sans-serif;
+    }
+    .p-vote-count.pos { color: #1db954; }
+
+    /* Search content */
+    .p-search-wrap {
+      position: relative;
+      padding: 10px 12px 6px;
+    }
+
+    .p-search-icon {
+      position: absolute;
+      left: 26px;
+      top: 50%;
+      transform: translateY(-4px);
+      color: #6a6a6a;
+      pointer-events: none;
+    }
+
+    .p-search-input {
+      width: 100%;
+      background: #282828;
+      border: none;
+      border-radius: 500px;
+      padding: 8px 12px 8px 36px;
+      font-size: 11px;
+      font-family: 'Outfit', sans-serif;
+      color: #fff;
+      outline: none;
+    }
+    .p-search-input::placeholder { color: #6a6a6a; }
+
+    .p-search-result {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .p-search-result:hover { background: rgba(255,255,255,0.08); }
+
+    .p-search-art {
+      width: 38px; height: 38px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .p-search-info { flex: 1; min-width: 0; }
+
+    .p-search-track {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .p-search-artist {
+      font-size: 10px;
+      color: #b3b3b3;
+      margin-top: 1px;
+    }
+
+    .p-add-btn {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: transparent;
+      border: 1px solid #6a6a6a;
+      color: #b3b3b3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+    .p-add-btn:hover { border-color: #fff; color: #fff; }
+    .p-add-btn.added { border-color: #1db954; color: #1db954; }
+
+    /* Bottom nav */
+    .p-bottom-nav {
+      display: flex;
+      flex-shrink: 0;
+      background: rgba(0,0,0,0.96);
+      border-top: 1px solid rgba(255,255,255,0.07);
+    }
+
+    .p-tab {
+      flex: 1;
+      padding: 8px 4px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      font-size: 9px;
+      font-weight: 600;
+      color: #6a6a6a;
+      cursor: pointer;
+      transition: color 0.12s;
+      letter-spacing: 0.01em;
+    }
+    .p-tab.active { color: #fff; }
+    .p-tab.active svg { stroke: #1db954; }
+
+    .p-tab svg {
+      width: 18px; height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition: stroke 0.12s;
+    }
+
+    /* Shared album art gradients */
+    .album-1 { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 70%, #533483 100%); }
+    .album-2 { background: linear-gradient(135deg, #2d1b69 0%, #11998e 100%); }
+    .album-3 { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+    .album-4 { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    .album-5 { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+    .album-6 { background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); }
+
+    /* ─── HOOK STRIP ───────────────────────── */
+    .hook-strip {
+      background: var(--green);
+      padding: 20px 40px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hook-ticker {
+      display: flex;
+      gap: 60px;
+      animation: ticker-scroll 30s linear infinite;
+      white-space: nowrap;
+      width: max-content;
+    }
+
+    @keyframes ticker-scroll {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+
+    .hook-ticker-item {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      color: #000;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .hook-ticker-sep {
+      width: 4px; height: 4px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 50%;
+    }
+
+    /* ─── CALLOUT ──────────────────────────── */
+    .callout-section {
+      padding: 100px 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .callout-inner {
+      max-width: 1000px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .callout-eyebrow {
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 24px;
+    }
+
+    .callout-headline {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(36px, 5vw, 64px);
+      line-height: 1.1;
+      letter-spacing: -1.5px;
+      margin-bottom: 24px;
+    }
+
+    .callout-headline .dim { color: var(--gray-3); }
+
+    .callout-sub {
+      font-size: 18px;
+      color: var(--gray-2);
+      font-weight: 300;
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* ─── DEMO SECTION ─────────────────────── */
+    #demo {
+      padding: 60px 40px 100px;
+      position: relative;
+    }
+
+    .section-label {
+      text-align: center;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(28px, 3.5vw, 44px);
+      letter-spacing: -1px;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .section-sub {
+      text-align: center;
+      color: var(--gray-2);
+      font-size: 16px;
+      font-weight: 300;
+      max-width: 560px;
+      margin: 0 auto 56px;
+    }
+
+    /* ─── MAC WINDOW (host app) ─────────────── */
+    .mac-window {
+      max-width: 860px;
+      margin: 0 auto;
+      background: #181818;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+      overflow: hidden;
+      box-shadow: 0 40px 100px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,0,0,0.4);
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .mac-titlebar {
+      height: 40px;
+      background: #111111;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 7px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+
+    .mac-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .mac-dot.red { background: #ff5f57; }
+    .mac-dot.yellow { background: #febc2e; }
+    .mac-dot.green { background: #28c840; }
+
+    .mac-title {
+      flex: 1;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 500;
+      color: #6a6a6a;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    /* Two-column app layout */
+    .mac-app-body {
+      display: flex;
+      height: 420px;
+    }
+
+    /* ── Sidebar ── */
+    .mac-sidebar {
+      width: 240px;
+      flex-shrink: 0;
+      background: #121212;
+      border-right: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .mac-sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 14px 10px;
+    }
+
+    .mac-logo {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      color: #fff;
+      line-height: 1;
+    }
+    .mac-logo span { color: #1db954; }
+
+    .mac-gear-btn {
+      width: 26px; height: 26px;
+      background: none;
+      border: none;
+      color: #6a6a6a;
+      cursor: pointer;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s;
+    }
+    .mac-gear-btn:hover { color: #b3b3b3; background: #2a2a2a; }
+
+    .mac-np-card {
+      margin: 0 10px;
+      background: #282828;
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .mac-np-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: #6a6a6a;
+      margin-bottom: 8px;
+    }
+
+    .mac-np-art {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 70%, #533483 100%);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      margin-bottom: 10px;
+    }
+
+    .mac-np-track {
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      letter-spacing: -0.3px;
+      margin-bottom: 2px;
+    }
+
+    .mac-np-artist {
+      font-size: 10px;
+      color: #b3b3b3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 7px;
+    }
+
+    .mac-np-status {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #1db954;
+      margin-bottom: 8px;
+    }
+
+    .mac-eq {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 11px;
+    }
+
+    .mac-eq-bar {
+      width: 3px;
+      background: #1db954;
+      border-radius: 1px;
+      transform-origin: bottom;
+    }
+    .mac-eq-bar:nth-child(1) { animation: eq-bounce 0.9s ease-in-out infinite; height: 11px; }
+    .mac-eq-bar:nth-child(2) { animation: eq-bounce 0.9s ease-in-out infinite 0.2s; height: 8px; }
+    .mac-eq-bar:nth-child(3) { animation: eq-bounce 0.9s ease-in-out infinite 0.4s; height: 11px; }
+
+    @keyframes eq-bounce {
+      0%, 100% { transform: scaleY(0.45); }
+      50% { transform: scaleY(1); }
+    }
+
+    .mac-np-progress {
+      height: 3px;
+      background: #3e3e3e;
+      border-radius: 3px;
+      margin-bottom: 5px;
+    }
+    .mac-np-progress-fill {
+      height: 100%;
+      width: 38%;
+      background: #1db954;
+      border-radius: 3px;
+    }
+    .mac-np-times {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9px;
+      color: #6a6a6a;
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 10px;
+    }
+
+    .mac-controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .mac-ctrl-btn {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: #b3b3b3;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s;
+    }
+    .mac-ctrl-btn:hover { color: #fff; }
+
+    .mac-ctrl-btn.play {
+      width: 40px; height: 40px;
+      background: #fff;
+      color: #000;
+      flex-shrink: 0;
+    }
+    .mac-ctrl-btn.play:hover { background: #f0f0f0; }
+
+    /* Guests section */
+    .mac-guests {
+      margin: 10px 10px 0;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      flex: 1;
+    }
+
+    .mac-guests-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: #6a6a6a;
+      margin-bottom: 7px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mac-guests-count {
+      background: #3e3e3e;
+      color: #b3b3b3;
+      font-size: 9px;
+      padding: 1px 6px;
+      border-radius: 10px;
+    }
+
+    .mac-guest-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .mac-guest-chip {
+      background: #2a2a2a;
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 10px;
+      color: #b3b3b3;
+    }
+
+    .mac-stop-btn {
+      margin: 10px;
+      width: calc(100% - 20px);
+      padding: 8px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      color: #b3b3b3;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: 'Outfit', sans-serif;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .mac-stop-btn:hover { border-color: rgba(224,82,82,0.5); color: #e05252; }
+
+    /* ── Main panel ── */
+    .mac-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: #181818;
+    }
+
+    .mac-main-header {
+      padding: 16px 18px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .mac-queue-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .mac-queue-count {
+      font-size: 11px;
+      color: #6a6a6a;
+    }
+
+    .mac-queue-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px 10px;
+      scrollbar-width: none;
+    }
+    .mac-queue-list::-webkit-scrollbar { display: none; }
+
+    .mac-queue-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      transition: background 0.12s;
+    }
+    .mac-queue-item:hover { background: #282828; }
+    .mac-queue-item.first {
+      border-left: 2px solid #1db954;
+      background: rgba(29,185,84,0.05);
+      padding-left: 8px;
+    }
+
+    .mac-queue-pos {
+      width: 20px;
+      font-size: 11px;
+      color: #6a6a6a;
+      font-weight: 700;
+      text-align: center;
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .mac-queue-art {
+      width: 40px; height: 40px;
+      border-radius: 5px;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .mac-queue-item.first .mac-queue-art { width: 46px; height: 46px; }
+
+    .mac-queue-track { flex: 1; min-width: 0; }
+
+    .mac-queue-track-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      letter-spacing: -0.2px;
+    }
+    .mac-queue-item.first .mac-queue-track-name { font-size: 14px; }
+
+    .mac-queue-track-artist {
+      font-size: 11px;
+      color: #b3b3b3;
+      margin-top: 2px;
+    }
+
+    .mac-queue-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .mac-queue-requester {
+      font-size: 10px;
+      color: #1db954;
+      background: rgba(29,185,84,0.08);
+      border: 1px solid rgba(29,185,84,0.2);
+      padding: 2px 8px;
+      border-radius: 100px;
+    }
+
+    .mac-queue-votes {
+      font-size: 11px;
+      font-weight: 600;
+      color: #6a6a6a;
+      min-width: 24px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .mac-queue-votes.pos { color: #1db954; }
+
+    /* Party URL demo */
+    .demo-start-area {
+      text-align: center;
+      padding: 24px 0 0;
+      border-top: 1px solid var(--border);
+    }
+
+    #start-party-btn {
+      font-size: 15px;
+      padding: 12px 28px;
+    }
+
+    .demo-url-reveal {
+      margin-top: 20px;
+      display: none;
+    }
+
+    .demo-url-reveal.visible {
+      display: flex;
+      align-items: flex-start;
+      gap: 28px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .demo-url-box {
+      background: var(--elevated);
+      border: 1px solid var(--border-strong);
+      border-radius: 12px;
+      padding: 14px 20px;
+    }
+
+    .demo-url-label {
+      font-size: 11px;
+      color: var(--gray-2);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .demo-url-value {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--green);
+    }
+
+    .demo-url-char {
+      display: inline-block;
+      opacity: 0;
+      animation: char-appear 0.05s forwards;
+    }
+
+    @keyframes char-appear {
+      to { opacity: 1; }
+    }
+
+    .demo-qr {
+      background: white;
+      border-radius: 10px;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .demo-guests-notification {
+      margin-top: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--green-dim);
+      border: 1px solid rgba(29,185,84,0.3);
+      border-radius: 100px;
+      padding: 6px 16px;
+      font-size: 13px;
+      color: var(--green-bright);
+      font-weight: 500;
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+
+    .demo-guests-notification.show { opacity: 1; }
+
+    /* ─── FEATURES ─────────────────────────── */
+    #features {
+      padding: 100px 40px;
+    }
+
+    .features-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .features-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      margin-top: 20px;
+    }
+
+    .feature-col {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 36px;
+    }
+
+    .feature-col-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .feature-col-icon {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .feature-col-icon.host { background: var(--green-dim); }
+    .feature-col-icon.guest { background: rgba(100, 120, 255, 0.15); }
+
+    .feature-col-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 20px;
+      letter-spacing: -0.3px;
+    }
+
+    .feature-col-sub {
+      font-size: 13px;
+      color: var(--gray-2);
+    }
+
+    .feature-list { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+
+    .feature-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .feature-check {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: var(--green-dim);
+      border: 1px solid rgba(29,185,84,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .feature-check.blue {
+      background: rgba(100,120,255,0.15);
+      border-color: rgba(100,120,255,0.3);
+    }
+
+    .feature-text {
+      font-size: 14px;
+      color: var(--gray-1);
+      line-height: 1.5;
+    }
+
+    .feature-text strong { color: var(--white); font-weight: 500; }
+
+    /* ─── HOW IT WORKS ─────────────────────── */
+    #how {
+      padding: 100px 40px;
+      position: relative;
+    }
+
+    .how-inner {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin-top: 56px;
+      position: relative;
+    }
+
+    .steps::before {
+      content: '';
+      position: absolute;
+      left: 24px;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: linear-gradient(to bottom, var(--green), transparent);
+    }
+
+    .step {
+      display: flex;
+      gap: 28px;
+      padding-bottom: 48px;
+      position: relative;
+    }
+
+    .step:last-child { padding-bottom: 0; }
+
+    .step-num {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--green);
+      position: relative;
+      z-index: 2;
+    }
+
+    .step-content { padding-top: 10px; }
+
+    .step-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+      margin-bottom: 8px;
+      letter-spacing: -0.2px;
+    }
+
+    .step-desc {
+      font-size: 15px;
+      color: var(--gray-2);
+      line-height: 1.7;
+    }
+
+    .step-desc code {
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      background: var(--elevated);
+      border: 1px solid var(--border);
+      padding: 2px 7px;
+      border-radius: 4px;
+      color: var(--green-bright);
+    }
+
+    /* ─── COMPARISON ───────────────────────── */
+    #comparison {
+      padding: 100px 40px;
+    }
+
+    .compare-inner {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .compare-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin-top: 48px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .compare-table th {
+      padding: 16px 24px;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+
+    .compare-table th.highlight {
+      background: var(--green-subtle);
+      color: var(--green);
+    }
+
+    .compare-table td {
+      padding: 14px 24px;
+      font-size: 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--gray-1);
+      background: var(--bg);
+    }
+
+    .compare-table tr:last-child td { border-bottom: none; }
+
+    .compare-table td.highlight {
+      background: var(--green-subtle);
+    }
+
+    .compare-table td.feature-name {
+      font-weight: 500;
+      color: var(--white);
+    }
+
+    .check-yes { color: var(--green); font-size: 16px; }
+    .check-no { color: var(--gray-3); }
+    .check-partial { color: #f5a623; }
+
+    /* ─── OPEN SOURCE ──────────────────────── */
+    #opensource {
+      padding: 100px 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .opensource-inner {
+      max-width: 900px;
+      margin: 0 auto;
+      text-align: center;
+      position: relative;
+      z-index: 2;
+    }
+
+    .opensource-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 60px 48px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .opensource-card::before {
+      content: '';
+      position: absolute;
+      top: -1px; left: -1px; right: -1px;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--green), transparent);
+    }
+
+    .opensource-icon {
+      width: 72px; height: 72px;
+      background: var(--green-dim);
+      border: 1px solid rgba(29,185,84,0.3);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+    }
+
+    .opensource-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 40px;
+      letter-spacing: -1px;
+      margin-bottom: 16px;
+    }
+
+    .opensource-sub {
+      font-size: 17px;
+      color: var(--gray-2);
+      font-weight: 300;
+      line-height: 1.7;
+      max-width: 560px;
+      margin: 0 auto 36px;
+    }
+
+    .opensource-pills {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 36px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .pill-green {
+      background: var(--green-dim);
+      border: 1px solid rgba(29,185,84,0.3);
+      color: var(--green-bright);
+    }
+
+    .pill-gray {
+      background: var(--elevated);
+      border: 1px solid var(--border-strong);
+      color: var(--gray-1);
+    }
+
+    .opensource-actions {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    /* ─── FAQ ──────────────────────────────── */
+    #faq {
+      padding: 100px 40px;
+    }
+
+    .faq-inner {
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    .faq-list {
+      margin-top: 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .faq-item {
+      border-bottom: 1px solid var(--border);
+    }
+    .faq-item:last-child { border-bottom: none; }
+
+    .faq-q {
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 20px 24px;
+      text-align: left;
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      transition: background 0.15s;
+    }
+
+    .faq-q:hover { background: var(--elevated); }
+
+    .faq-arrow {
+      color: var(--gray-3);
+      transition: transform 0.25s;
+      flex-shrink: 0;
+      font-size: 18px;
+    }
+
+    .faq-item.open .faq-arrow { transform: rotate(180deg); color: var(--green); }
+
+    .faq-a {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .faq-a-inner {
+      padding: 0 24px 20px;
+      font-size: 14px;
+      color: var(--gray-2);
+      line-height: 1.75;
+    }
+
+    /* ─── DOWNLOAD ─────────────────────────── */
+    #download {
+      padding: 100px 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .download-orb {
+      position: absolute;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(29,185,84,0.12) 0%, transparent 70%);
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .download-inner {
+      max-width: 700px;
+      margin: 0 auto;
+      text-align: center;
+      position: relative;
+      z-index: 2;
+    }
+
+    .download-headline {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(36px, 5vw, 60px);
+      letter-spacing: -1.5px;
+      line-height: 1.1;
+      margin-bottom: 20px;
+    }
+
+    .download-sub {
+      font-size: 17px;
+      color: var(--gray-2);
+      font-weight: 300;
+      margin-bottom: 40px;
+      line-height: 1.7;
+    }
+
+    .download-actions {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .download-note {
+      font-size: 13px;
+      color: var(--gray-3);
+    }
+
+    /* ─── FOOTER ───────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px;
+    }
+
+    .footer-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .footer-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--white);
+      text-decoration: none;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+    }
+
+    .footer-links a {
+      font-size: 13px;
+      color: var(--gray-3);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--white); }
+
+    .footer-copy {
+      font-size: 13px;
+      color: var(--gray-3);
+    }
+
+    /* ─── SCROLL REVEAL ───────────────────── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+
+
+    /* ─── DOWNLOAD MODAL ───────────────────── */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(6px);
+      z-index: 9000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      padding: 36px;
+      max-width: 480px;
+      width: 100%;
+      position: relative;
+      transform: translateY(16px);
+      transition: transform 0.25s ease;
+      box-shadow: 0 40px 80px rgba(0,0,0,0.5);
+    }
+    .modal-backdrop.open .modal {
+      transform: translateY(0);
+    }
+    .modal-close {
+      position: absolute;
+      top: 16px; right: 16px;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--elevated);
+      border: 1px solid var(--border);
+      color: var(--gray-2);
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      line-height: 1;
+    }
+    .modal-close:hover { background: var(--gray-4); color: var(--white); }
+    .modal-icon {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      background: rgba(250,175,0,0.12);
+      border: 1px solid rgba(250,175,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .modal-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 20px;
+      letter-spacing: -0.3px;
+      margin-bottom: 8px;
+    }
+    .modal-sub {
+      font-size: 14px;
+      color: var(--gray-2);
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+    .modal-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .modal-step {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .modal-step-num {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      background: var(--green-dim);
+      border: 1px solid rgba(29,185,84,0.3);
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .modal-step-text {
+      font-size: 14px;
+      color: var(--gray-1);
+      line-height: 1.5;
+    }
+    .modal-step-text strong { color: var(--white); font-weight: 500; }
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .modal-actions .btn { flex: 1; justify-content: center; }
+
+    /* ─── RESPONSIVE ────────────────────────── */
+    @media (max-width: 900px) {
+      nav { padding: 0 24px; }
+      .nav-links { display: none; }
+      #hero { padding: 80px 24px 60px; }
+      .hero-inner { grid-template-columns: 1fr; gap: 48px; text-align: center; }
+      .hero-sub { max-width: 100%; }
+      .hero-actions { justify-content: center; }
+      .hero-note { justify-content: center; }
+      .phone-wrap { order: -1; }
+      .features-cols { grid-template-columns: 1fr; }
+      .callout-section { padding: 60px 24px; }
+      #features, #how, #comparison, #opensource, #faq, #download, #demo { padding-left: 24px; padding-right: 24px; }
+      .mac-body { padding: 20px; }
+      .compare-table th, .compare-table td { padding: 10px 14px; font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ─── NAV ───────────────────────────────── -->
+  <nav>
+    <a class="nav-logo" href="#">
+      <div class="nav-logo-icon">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="8" r="7" fill="#000"/>
+          <path d="M4 6.5c2.2-.7 4.6-.5 6.6.7M4.5 8.5c1.8-.5 3.8-.4 5.4.6M5 10.5c1.4-.4 2.9-.3 4.2.4" stroke="#000" stroke-width="1.4" stroke-linecap="round"/>
+          <path d="M4 6.5c2.2-.7 4.6-.5 6.6.7M4.5 8.5c1.8-.5 3.8-.4 5.4.6M5 10.5c1.4-.4 2.9-.3 4.2.4" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      Spartify
+    </a>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#how">How It Works</a></li>
+      <li><a href="#comparison">vs Jams</a></li>
+      <li><a href="#faq">FAQ</a></li>
+      <li><a href="https://github.com/uhteddy/spartify">GitHub</a></li>
+    </ul>
+    <div class="nav-cta">
+      <a href="https://github.com/uhteddy/spartify" class="btn btn-ghost">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        GitHub
+      </a>
+      <a href="https://github.com/uhteddy/spartify/releases/latest" class="btn btn-green download-btn">Download</a>
+    </div>
+  </nav>
+
+  <!-- ─── HERO ───────────────────────────────── -->
+  <section id="hero">
+    <div class="hero-grid-line"></div>
+    <div class="hero-orb hero-orb-1"></div>
+    <div class="hero-orb hero-orb-2"></div>
+
+    <div class="hero-inner">
+      <div class="hero-text">
+        <div class="hero-badge">
+          <div class="hero-badge-dot"></div>
+          Free &amp; Open Source
+        </div>
+        <h1 class="hero-headline">
+          Your party.<br>
+          <span class="accent">Your rules.</span><br>
+          No logins.
+        </h1>
+        <p class="hero-sub">
+          Spartify turns your Spotify into a collaborative party station.
+          <strong>Only you need Spotify Premium.</strong> Guests join from any phone or browser —
+          no app, no account, zero friction.
+        </p>
+        <div class="hero-actions">
+          <a href="https://github.com/uhteddy/spartify/releases/latest" class="btn btn-green btn-lg download-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download Spartify
+          </a>
+          <a href="https://github.com/uhteddy/spartify" class="btn btn-ghost btn-lg">
+            View on GitHub
+          </a>
+        </div>
+        <p class="hero-note">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          Free · Open Source · Requires Spotify Premium (host only)
+        </p>
+      </div>
+
+      <!-- Phone Mockup — mirrors actual guest page -->
+      <div class="phone-wrap">
+        <div class="phone-glow"></div>
+        <div class="phone" id="phone-mockup">
+          <div class="phone-notch"></div>
+          <div class="phone-status">
+            <span>9:41</span>
+            <span style="display:flex;align-items:center;gap:3px;font-size:10px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1.42 1.42 22.58 22.58M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              ■
+            </span>
+          </div>
+
+          <!-- Header -->
+          <div class="p-header">
+            <div class="p-logo">Spar<span>tify</span></div>
+            <div class="p-ws-dot"></div>
+            <div class="p-guest-badge">You</div>
+          </div>
+
+          <!-- Now Playing bar -->
+          <div class="p-np-bar">
+            <div class="p-np-progress-strip">
+              <div class="p-np-progress-fill" id="phone-progress"></div>
+            </div>
+            <div class="p-np-row">
+              <div class="p-np-art album-1"></div>
+              <div class="p-np-info">
+                <div class="p-np-title">Blinding Lights</div>
+                <div class="p-np-artist">The Weeknd</div>
+              </div>
+              <button class="p-np-open">
+                Open
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline;vertical-align:middle;margin-left:2px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Queue tab -->
+          <div class="p-tab-content active" id="ptab-queue">
+            <div class="p-section-label">Requested</div>
+
+            <div class="p-queue-item" style="border-left: 2px solid #1db954; background: rgba(29,185,84,0.05); padding-left: 10px;">
+              <div class="p-queue-pos">1</div>
+              <div class="p-queue-art album-2"></div>
+              <div class="p-queue-info">
+                <div class="p-queue-track">As It Was</div>
+                <div class="p-queue-artist">Harry Styles</div>
+              </div>
+              <div class="p-vote-ctrl">
+                <button class="p-vote-btn voted-up" onclick="pVote(this,1)">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+                </button>
+                <span class="p-vote-count pos" id="pvc-1">+5</span>
+                <button class="p-vote-btn" onclick="pVote(this,-1)">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="p-queue-item">
+              <div class="p-queue-pos">2</div>
+              <div class="p-queue-art album-3"></div>
+              <div class="p-queue-info">
+                <div class="p-queue-track">Anti-Hero</div>
+                <div class="p-queue-artist">Taylor Swift</div>
+              </div>
+              <div class="p-vote-ctrl">
+                <button class="p-vote-btn" onclick="pVote(this,1)">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+                </button>
+                <span class="p-vote-count pos" id="pvc-2">+3</span>
+                <button class="p-vote-btn" onclick="pVote(this,-1)">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="p-queue-item">
+              <div class="p-queue-pos">3</div>
+              <div class="p-queue-art album-4"></div>
+              <div class="p-queue-info">
+                <div class="p-queue-track">Flowers</div>
+                <div class="p-queue-artist">Miley Cyrus</div>
+              </div>
+              <div class="p-vote-ctrl">
+                <button class="p-vote-btn" onclick="pVote(this,1)">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+                </button>
+                <span class="p-vote-count" id="pvc-3">+1</span>
+                <button class="p-vote-btn" onclick="pVote(this,-1)">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="p-queue-item">
+              <div class="p-queue-pos">4</div>
+              <div class="p-queue-art album-5"></div>
+              <div class="p-queue-info">
+                <div class="p-queue-track">Espresso</div>
+                <div class="p-queue-artist">Sabrina Carpenter</div>
+              </div>
+              <div class="p-vote-ctrl">
+                <button class="p-vote-btn" onclick="pVote(this,1)">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+                </button>
+                <span class="p-vote-count" id="pvc-4">0</span>
+                <button class="p-vote-btn" onclick="pVote(this,-1)">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Search tab -->
+          <div class="p-tab-content" id="ptab-search">
+            <div class="p-search-wrap">
+              <svg class="p-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input class="p-search-input" type="text" placeholder="Search songs..." value="Dua Lipa" readonly>
+            </div>
+            <div class="p-search-result">
+              <div class="p-search-art album-5"></div>
+              <div class="p-search-info">
+                <div class="p-search-track">Levitating</div>
+                <div class="p-search-artist">Dua Lipa</div>
+              </div>
+              <button class="p-add-btn" onclick="pAdd(this)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+            </div>
+            <div class="p-search-result">
+              <div class="p-search-art album-6"></div>
+              <div class="p-search-info">
+                <div class="p-search-track">Don't Start Now</div>
+                <div class="p-search-artist">Dua Lipa</div>
+              </div>
+              <button class="p-add-btn" onclick="pAdd(this)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+            </div>
+            <div class="p-search-result">
+              <div class="p-search-art album-1"></div>
+              <div class="p-search-info">
+                <div class="p-search-track">Physical</div>
+                <div class="p-search-artist">Dua Lipa</div>
+              </div>
+              <button class="p-add-btn" onclick="pAdd(this)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+            </div>
+            <div class="p-search-result">
+              <div class="p-search-art album-3"></div>
+              <div class="p-search-info">
+                <div class="p-search-track">Houdini</div>
+                <div class="p-search-artist">Dua Lipa</div>
+              </div>
+              <button class="p-add-btn" onclick="pAdd(this)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- History tab -->
+          <div class="p-tab-content" id="ptab-history">
+            <div class="p-section-label">Played</div>
+            <div class="p-queue-item">
+              <div class="p-queue-pos" style="color:#6a6a6a;opacity:0.5;">✓</div>
+              <div class="p-queue-art album-6"></div>
+              <div class="p-queue-info">
+                <div class="p-queue-track" style="color:#b3b3b3;">Cruel Summer</div>
+                <div class="p-queue-artist">Taylor Swift</div>
+              </div>
+            </div>
+            <div class="p-queue-item">
+              <div class="p-queue-pos" style="color:#6a6a6a;opacity:0.5;">✓</div>
+              <div class="p-queue-art album-4"></div>
+              <div class="p-queue-info">
+                <div class="p-queue-track" style="color:#b3b3b3;">Watermelon Sugar</div>
+                <div class="p-queue-artist">Harry Styles</div>
+              </div>
+            </div>
+            <div class="p-queue-item">
+              <div class="p-queue-pos" style="color:#6a6a6a;opacity:0.5;">✓</div>
+              <div class="p-queue-art album-2"></div>
+              <div class="p-queue-info">
+                <div class="p-queue-track" style="color:#b3b3b3;">Save Your Tears</div>
+                <div class="p-queue-artist">The Weeknd</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom nav -->
+          <div class="p-bottom-nav">
+            <div class="p-tab" data-ptab="search" onclick="switchPTab('search')">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              Search
+            </div>
+            <div class="p-tab active" data-ptab="queue" onclick="switchPTab('queue')">
+              <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              Queue
+            </div>
+            <div class="p-tab" data-ptab="history" onclick="switchPTab('history')">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              History
+            </div>
+          </div>
+
+        </div><!-- phone -->
+      </div><!-- phone-wrap -->
+    </div><!-- hero-inner -->
+  </section>
+
+  <!-- ─── HOOK TICKER ────────────────────────── -->
+  <div class="hook-strip">
+    <div class="hook-ticker">
+      <div class="hook-ticker-item">Only the host needs Spotify Premium <span class="hook-ticker-sep"></span></div>
+      <div class="hook-ticker-item">Guests need zero accounts <span class="hook-ticker-sep"></span></div>
+      <div class="hook-ticker-item">No app install required <span class="hook-ticker-sep"></span></div>
+      <div class="hook-ticker-item">Works from any browser <span class="hook-ticker-sep"></span></div>
+      <div class="hook-ticker-item">100% free &amp; open source <span class="hook-ticker-sep"></span></div>
+      <div class="hook-ticker-item">Host stays in control <span class="hook-ticker-sep"></span></div>
+      <div class="hook-ticker-item">Public URL auto-generated <span class="hook-ticker-sep"></span></div>
+      <div class="hook-ticker-item">Real-time voting <span class="hook-ticker-sep"></span></div>
+      <!-- repeat for seamless loop -->
+      <div class="hook-ticker-item">Only the host needs Spotify Premium <span class="hook-ticker-sep"></span></div>
+      <div class="hook-ticker-item">Guests need zero accounts <span class="hook-ticker-sep"></span></div>
+      <div class="hook-ticker-item">No app install required <span class="hook-ticker-sep"></span></div>
+      <div class="hook-ticker-item">Works from any browser <span class="hook-ticker-sep"></span></div>
+      <div class="hook-ticker-item">100% free &amp; open source <span class="hook-ticker-sep"></span></div>
+      <div class="hook-ticker-item">Host stays in control <span class="hook-ticker-sep"></span></div>
+      <div class="hook-ticker-item">Public URL auto-generated <span class="hook-ticker-sep"></span></div>
+      <div class="hook-ticker-item">Real-time voting <span class="hook-ticker-sep"></span></div>
+    </div>
+  </div>
+
+  <!-- ─── CALLOUT ────────────────────────────── -->
+  <div class="callout-section">
+    <div class="callout-inner reveal">
+      <p class="callout-eyebrow">The Big Idea</p>
+      <h2 class="callout-headline">
+        <span class="dim">Guests join.</span><br>
+        Guests vote.<br>
+        <span class="dim">You control.</span>
+      </h2>
+      <p class="callout-sub">
+        Share a URL or QR code. Your friends open it on their phones — no login, no download, nothing to install.
+        They search Spotify's full catalog, request songs, and vote on what plays next. You stay in the driver's seat the whole time.
+      </p>
+    </div>
+  </div>
+
+  <!-- ─── INTERACTIVE DEMO ────────────────────── -->
+  <section id="demo">
+    <p class="section-label reveal">See It In Action</p>
+    <h2 class="section-title reveal">Start a party in seconds</h2>
+    <p class="section-sub reveal">One click. A public URL. A QR code. Done.</p>
+
+    <div class="mac-window reveal">
+      <div class="mac-titlebar">
+        <div class="mac-dot red"></div>
+        <div class="mac-dot yellow"></div>
+        <div class="mac-dot green"></div>
+        <div class="mac-title">Spartify</div>
+      </div>
+      <div class="mac-app-body">
+
+        <!-- Sidebar -->
+        <div class="mac-sidebar">
+          <div class="mac-sidebar-header">
+            <div class="mac-logo">Spar<span>tify</span></div>
+            <button class="mac-gear-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
+          </div>
+
+          <div class="mac-np-card">
+            <div class="mac-np-label">Now Playing</div>
+            <div class="mac-np-art"></div>
+            <div class="mac-np-track">Blinding Lights</div>
+            <div class="mac-np-artist">The Weeknd</div>
+            <div class="mac-np-status">
+              <div class="mac-eq">
+                <div class="mac-eq-bar"></div>
+                <div class="mac-eq-bar"></div>
+                <div class="mac-eq-bar"></div>
+              </div>
+              Playing
+            </div>
+            <div class="mac-np-progress">
+              <div class="mac-np-progress-fill"></div>
+            </div>
+            <div class="mac-np-times"><span>1:32</span><span>3:20</span></div>
+            <div class="mac-controls">
+              <button class="mac-ctrl-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2"/></svg>
+              </button>
+              <button class="mac-ctrl-btn play" id="mac-play-btn" onclick="togglePlay()">
+                <svg id="mac-play-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+              </button>
+              <button class="mac-ctrl-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="mac-guests">
+            <div class="mac-guests-label">
+              Guests
+              <span class="mac-guests-count">7</span>
+            </div>
+            <div class="mac-guest-chips">
+              <div class="mac-guest-chip">Sarah</div>
+              <div class="mac-guest-chip">Mike</div>
+              <div class="mac-guest-chip">Jordan</div>
+              <div class="mac-guest-chip">Alex</div>
+              <div class="mac-guest-chip">+3</div>
+            </div>
+          </div>
+
+          <button class="mac-stop-btn">Stop Party</button>
+        </div>
+
+        <!-- Main panel -->
+        <div class="mac-main">
+          <div class="mac-main-header">
+            <div class="mac-queue-title">Queue</div>
+            <div class="mac-queue-count">4 songs</div>
+          </div>
+          <div class="mac-queue-list">
+            <div class="mac-queue-item first">
+              <div class="mac-queue-pos">1</div>
+              <div class="mac-queue-art album-2"></div>
+              <div class="mac-queue-track">
+                <div class="mac-queue-track-name">As It Was</div>
+                <div class="mac-queue-track-artist">Harry Styles</div>
+              </div>
+              <div class="mac-queue-meta">
+                <span class="mac-queue-requester">Sarah</span>
+                <span class="mac-queue-votes pos">+5</span>
+              </div>
+            </div>
+            <div class="mac-queue-item">
+              <div class="mac-queue-pos">2</div>
+              <div class="mac-queue-art album-3"></div>
+              <div class="mac-queue-track">
+                <div class="mac-queue-track-name">Anti-Hero</div>
+                <div class="mac-queue-track-artist">Taylor Swift</div>
+              </div>
+              <div class="mac-queue-meta">
+                <span class="mac-queue-requester">Mike</span>
+                <span class="mac-queue-votes pos">+3</span>
+              </div>
+            </div>
+            <div class="mac-queue-item">
+              <div class="mac-queue-pos">3</div>
+              <div class="mac-queue-art album-4"></div>
+              <div class="mac-queue-track">
+                <div class="mac-queue-track-name">Flowers</div>
+                <div class="mac-queue-track-artist">Miley Cyrus</div>
+              </div>
+              <div class="mac-queue-meta">
+                <span class="mac-queue-requester">Jordan</span>
+                <span class="mac-queue-votes pos">+1</span>
+              </div>
+            </div>
+            <div class="mac-queue-item">
+              <div class="mac-queue-pos">4</div>
+              <div class="mac-queue-art album-5"></div>
+              <div class="mac-queue-track">
+                <div class="mac-queue-track-name">Espresso</div>
+                <div class="mac-queue-track-artist">Sabrina Carpenter</div>
+              </div>
+              <div class="mac-queue-meta">
+                <span class="mac-queue-requester">Alex</span>
+                <span class="mac-queue-votes">0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Start Party area -->
+          <div class="demo-start-area">
+            <button class="btn btn-green" id="start-party-btn" onclick="runPartyDemo()" style="font-family:'Outfit',sans-serif;border-radius:500px;font-size:13px;padding:9px 20px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Start a New Party
+            </button>
+
+          <div class="demo-url-reveal" id="demo-url-reveal">
+            <div>
+              <div class="demo-url-box">
+                <div class="demo-url-label">Share this link</div>
+                <div class="demo-url-value" id="demo-url-text"></div>
+              </div>
+              <div class="demo-guests-notification" id="demo-guests-notif">
+                <div class="hero-badge-dot"></div>
+                3 guests just joined!
+              </div>
+            </div>
+            <div class="demo-qr">
+              <!-- Fake QR Code SVG -->
+              <svg width="80" height="80" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
+                <rect width="21" height="21" fill="white"/>
+                <!-- Top-left finder -->
+                <rect x="1" y="1" width="7" height="7" fill="#000" rx="1"/>
+                <rect x="2" y="2" width="5" height="5" fill="#fff"/>
+                <rect x="3" y="3" width="3" height="3" fill="#000"/>
+                <!-- Top-right finder -->
+                <rect x="13" y="1" width="7" height="7" fill="#000" rx="1"/>
+                <rect x="14" y="2" width="5" height="5" fill="#fff"/>
+                <rect x="15" y="3" width="3" height="3" fill="#000"/>
+                <!-- Bottom-left finder -->
+                <rect x="1" y="13" width="7" height="7" fill="#000" rx="1"/>
+                <rect x="2" y="14" width="5" height="5" fill="#fff"/>
+                <rect x="3" y="15" width="3" height="3" fill="#000"/>
+                <!-- Data modules -->
+                <rect x="9" y="1" width="1" height="1" fill="#000"/>
+                <rect x="11" y="1" width="1" height="1" fill="#000"/>
+                <rect x="9" y="3" width="2" height="1" fill="#000"/>
+                <rect x="12" y="3" width="1" height="1" fill="#000"/>
+                <rect x="9" y="5" width="1" height="1" fill="#000"/>
+                <rect x="11" y="5" width="2" height="1" fill="#000"/>
+                <rect x="9" y="7" width="3" height="1" fill="#000"/>
+                <rect x="1" y="9" width="1" height="1" fill="#000"/>
+                <rect x="3" y="9" width="2" height="1" fill="#000"/>
+                <rect x="6" y="9" width="1" height="1" fill="#000"/>
+                <rect x="8" y="9" width="2" height="1" fill="#000"/>
+                <rect x="11" y="9" width="1" height="1" fill="#000"/>
+                <rect x="13" y="9" width="1" height="1" fill="#000"/>
+                <rect x="15" y="9" width="1" height="1" fill="#000"/>
+                <rect x="17" y="9" width="1" height="1" fill="#000"/>
+                <rect x="19" y="9" width="1" height="1" fill="#000"/>
+                <rect x="1" y="11" width="2" height="1" fill="#000"/>
+                <rect x="5" y="11" width="1" height="1" fill="#000"/>
+                <rect x="7" y="11" width="2" height="1" fill="#000"/>
+                <rect x="10" y="11" width="1" height="1" fill="#000"/>
+                <rect x="12" y="11" width="3" height="1" fill="#000"/>
+                <rect x="17" y="11" width="2" height="1" fill="#000"/>
+                <rect x="9" y="13" width="2" height="1" fill="#000"/>
+                <rect x="12" y="13" width="1" height="1" fill="#000"/>
+                <rect x="14" y="13" width="2" height="1" fill="#000"/>
+                <rect x="17" y="13" width="1" height="1" fill="#000"/>
+                <rect x="19" y="13" width="1" height="1" fill="#000"/>
+                <rect x="9" y="15" width="1" height="1" fill="#000"/>
+                <rect x="11" y="15" width="3" height="1" fill="#000"/>
+                <rect x="15" y="15" width="1" height="1" fill="#000"/>
+                <rect x="17" y="15" width="3" height="1" fill="#000"/>
+                <rect x="9" y="17" width="2" height="1" fill="#000"/>
+                <rect x="12" y="17" width="1" height="1" fill="#000"/>
+                <rect x="14" y="17" width="3" height="1" fill="#000"/>
+                <rect x="18" y="17" width="1" height="1" fill="#000"/>
+                <rect x="9" y="19" width="1" height="1" fill="#000"/>
+                <rect x="11" y="19" width="2" height="1" fill="#000"/>
+                <rect x="14" y="19" width="1" height="1" fill="#000"/>
+                <rect x="16" y="19" width="1" height="1" fill="#000"/>
+                <rect x="18" y="19" width="2" height="1" fill="#000"/>
+              </svg>
+            </div>
+          </div>
+        </div><!-- mac-main -->
+      </div><!-- mac-app-body -->
+    </div><!-- mac-window -->
+  </section>
+
+  <!-- ─── FEATURES ──────────────────────────── -->
+  <section id="features">
+    <div class="features-inner">
+      <p class="section-label reveal">Features</p>
+      <h2 class="section-title reveal">Everything you need for the perfect party</h2>
+      <p class="section-sub reveal">Powerful host controls. A seamless guest experience. No compromise.</p>
+
+      <div class="features-cols">
+        <!-- Host -->
+        <div class="feature-col reveal">
+          <div class="feature-col-header">
+            <div class="feature-col-icon host">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1DB954" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9h6M9 12h4M9 15h2"/></svg>
+            </div>
+            <div>
+              <div class="feature-col-title">For the Host</div>
+              <div class="feature-col-sub">You need Spotify Premium · Desktop app</div>
+            </div>
+          </div>
+          <ul class="feature-list">
+            <li class="feature-item">
+              <div class="feature-check">
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#1DB954" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
+              </div>
+              <span class="feature-text"><strong>One-click party</strong> — get a shareable URL and QR code instantly</span>
+            </li>
+            <li class="feature-item">
+              <div class="feature-check">
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#1DB954" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
+              </div>
+              <span class="feature-text"><strong>Full playback controls</strong> — play, pause, skip forward and back</span>
+            </li>
+            <li class="feature-item">
+              <div class="feature-check">
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#1DB954" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
+              </div>
+              <span class="feature-text"><strong>Live party queue</strong> — see guest requests in the order Spotify will play them</span>
+            </li>
+            <li class="feature-item">
+              <div class="feature-check">
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#1DB954" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
+              </div>
+              <span class="feature-text"><strong>Party settings</strong> — optional password, request limits, explicit content blocking</span>
+            </li>
+            <li class="feature-item">
+              <div class="feature-check">
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#1DB954" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
+              </div>
+              <span class="feature-text"><strong>Guest list</strong> — see who has joined in real time</span>
+            </li>
+            <li class="feature-item">
+              <div class="feature-check">
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#1DB954" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
+              </div>
+              <span class="feature-text"><strong>Auto-queue &amp; auto-retire</strong> — requests push to Spotify automatically; played songs retire to history</span>
+            </li>
+            <li class="feature-item">
+              <div class="feature-check">
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#1DB954" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
+              </div>
+              <span class="feature-text"><strong>Device picker</strong> — choose which Spotify Connect device to play on</span>
+            </li>
+            <li class="feature-item">
+              <div class="feature-check">
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#1DB954" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
+              </div>
+              <span class="feature-text"><strong>Auto-updater</strong> — one-click updates when a new version is available</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Guest -->
+        <div class="feature-col reveal reveal-delay-1">
+          <div class="feature-col-header">
+            <div class="feature-col-icon guest">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6478ff" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div>
+              <div class="feature-col-title">For Guests</div>
+              <div class="feature-col-sub" style="color: #6478ff;">Zero account required · Any browser</div>
+            </div>
+          </div>
+          <ul class="feature-list">
+            <li class="feature-item">
+              <div class="feature-check blue">
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#6478ff" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
+              </div>
+              <span class="feature-text"><strong>No login, no app</strong> — just open a link or scan a QR code</span>
+            </li>
+            <li class="feature-item">
+              <div class="feature-check blue">
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#6478ff" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
+              </div>
+              <span class="feature-text"><strong>Full Spotify search</strong> — find and request any track from Spotify's entire catalog</span>
+            </li>
+            <li class="feature-item">
+              <div class="feature-check blue">
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#6478ff" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
+              </div>
+              <span class="feature-text"><strong>Voting</strong> — upvote or downvote tracks; queue order adjusts in real time</span>
+            </li>
+            <li class="feature-item">
+              <div class="feature-check blue">
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#6478ff" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
+              </div>
+              <span class="feature-text"><strong>Now Playing</strong> — album art, track name, artist, and a live synced progress bar</span>
+            </li>
+            <li class="feature-item">
+              <div class="feature-check blue">
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#6478ff" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
+              </div>
+              <span class="feature-text"><strong>Real-time updates</strong> — everything pushed over WebSocket, no refreshing needed</span>
+            </li>
+            <li class="feature-item">
+              <div class="feature-check blue">
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#6478ff" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
+              </div>
+              <span class="feature-text"><strong>Track history</strong> — browse every song that's played during the party</span>
+            </li>
+            <li class="feature-item">
+              <div class="feature-check blue">
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#6478ff" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
+              </div>
+              <span class="feature-text"><strong>Open in Spotify</strong> — tap any track to open it in the Spotify app directly</span>
+            </li>
+            <li class="feature-item">
+              <div class="feature-check blue">
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#6478ff" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
+              </div>
+              <span class="feature-text"><strong>Works everywhere</strong> — any phone, tablet, or laptop browser. No install, ever.</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── HOW IT WORKS ───────────────────────── -->
+  <section id="how">
+    <div class="how-inner">
+      <p class="section-label reveal">How It Works</p>
+      <h2 class="section-title reveal">Up and running in seconds</h2>
+      <p class="section-sub reveal">No setup, no configuration. Just connect Spotify and go.</p>
+
+      <div class="steps">
+        <div class="step reveal">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <div class="step-title">Connect your Spotify</div>
+            <p class="step-desc">Open Spartify and sign in with your Spotify account. That's it — everything stays on your device. Nothing is shared with us.</p>
+          </div>
+        </div>
+        <div class="step reveal reveal-delay-1">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <div class="step-title">Hit "Start Party"</div>
+            <p class="step-desc">Spartify instantly generates a unique link and QR code your guests can use to join. Works from anywhere — no Wi-Fi sharing required, no router settings to touch.</p>
+          </div>
+        </div>
+        <div class="step reveal reveal-delay-2">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <div class="step-title">Guests join from their phones</div>
+            <p class="step-desc">They tap the link or scan the QR code. That's all. No account, no app, no sign-up. They're immediately in — searching songs, requesting tracks, and voting on the queue.</p>
+          </div>
+        </div>
+        <div class="step reveal reveal-delay-3">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <div class="step-title">The music plays itself</div>
+            <p class="step-desc">Guest requests go straight to your Spotify queue. Votes automatically reorder what's coming up. When a song finishes it moves to history. The party runs itself — you just enjoy it.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── COMPARISON ─────────────────────────── -->
+  <section id="comparison">
+    <div class="compare-inner">
+      <p class="section-label reveal">Spartify vs Spotify Jams</p>
+      <h2 class="section-title reveal">Made for hosted events</h2>
+      <p class="section-sub reveal">Spotify Jams give everyone equal control. Spartify is built for when <em>you're</em> the host.</p>
+
+      <table class="compare-table reveal">
+        <thead>
+          <tr>
+            <th></th>
+            <th class="highlight">Spartify</th>
+            <th>Spotify Jams</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="feature-name">Guests need a Spotify account</td>
+            <td class="highlight"><span class="check-yes">✓ No</span></td>
+            <td><span class="check-no">✗ Yes</span></td>
+          </tr>
+          <tr>
+            <td class="feature-name">Guests need Spotify Premium</td>
+            <td class="highlight"><span class="check-yes">✓ No</span></td>
+            <td><span class="check-no">✗ Yes</span></td>
+          </tr>
+          <tr>
+            <td class="feature-name">Guests need to install anything</td>
+            <td class="highlight"><span class="check-yes">✓ No</span></td>
+            <td><span class="check-no">✗ Yes (Spotify app)</span></td>
+          </tr>
+          <tr>
+            <td class="feature-name">Host has full playback control</td>
+            <td class="highlight"><span class="check-yes">✓ Always</span></td>
+            <td><span class="check-partial">~ Shared with guests</span></td>
+          </tr>
+          <tr>
+            <td class="feature-name">Guest request limits</td>
+            <td class="highlight"><span class="check-yes">✓ Configurable</span></td>
+            <td><span class="check-no">✗ No</span></td>
+          </tr>
+          <tr>
+            <td class="feature-name">Queue size limit</td>
+            <td class="highlight"><span class="check-yes">✓ Configurable</span></td>
+            <td><span class="check-no">✗ No</span></td>
+          </tr>
+          <tr>
+            <td class="feature-name">Password protection</td>
+            <td class="highlight"><span class="check-yes">✓ Optional</span></td>
+            <td><span class="check-no">✗ No</span></td>
+          </tr>
+          <tr>
+            <td class="feature-name">Block explicit tracks</td>
+            <td class="highlight"><span class="check-yes">✓ Yes</span></td>
+            <td><span class="check-no">✗ No</span></td>
+          </tr>
+          <tr>
+            <td class="feature-name">Works outside your home network</td>
+            <td class="highlight"><span class="check-yes">✓ Yes, automatically</span></td>
+            <td><span class="check-yes">✓ Yes</span></td>
+          </tr>
+          <tr>
+            <td class="feature-name">Vote on queue order</td>
+            <td class="highlight"><span class="check-yes">✓ Yes</span></td>
+            <td><span class="check-no">✗ No</span></td>
+          </tr>
+          <tr>
+            <td class="feature-name">Free &amp; open source</td>
+            <td class="highlight"><span class="check-yes">✓ Yes</span></td>
+            <td><span class="check-no">✗ No</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ─── OPEN SOURCE ────────────────────────── -->
+  <section id="opensource">
+    <div class="opensource-inner">
+      <div class="opensource-card reveal">
+        <div class="opensource-icon">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="#1DB954"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        </div>
+        <h2 class="opensource-title">Free. Forever.</h2>
+        <p class="opensource-sub">
+          Spartify is fully open source under the MIT license. No subscription, no paywalled features, no ads.
+          Build it yourself, contribute, or just use it. It's yours.
+        </p>
+        <div class="opensource-pills">
+          <span class="pill pill-green">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            MIT License
+          </span>
+          <span class="pill pill-gray">No subscription</span>
+          <span class="pill pill-gray">No ads</span>
+          <span class="pill pill-gray">No paywalled features</span>
+        </div>
+        <div class="opensource-actions">
+          <a href="https://github.com/uhteddy/spartify" class="btn btn-green btn-lg">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+            View on GitHub
+          </a>
+          <a href="https://github.com/uhteddy/spartify/issues" class="btn btn-ghost btn-lg">
+            Report an Issue
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── FAQ ────────────────────────────────── -->
+  <section id="faq">
+    <div class="faq-inner">
+      <p class="section-label reveal">FAQ</p>
+      <h2 class="section-title reveal">Common questions</h2>
+      <div class="faq-list reveal">
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            Do guests need a Spotify account?
+            <span class="faq-arrow">▾</span>
+          </button>
+          <div class="faq-a">
+            <div class="faq-a-inner">No. Guests only need a modern browser. They open the link or scan the QR code and they're in — no Spotify account, no premium subscription, no app download.</div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            Does Spartify require Spotify Premium?
+            <span class="faq-arrow">▾</span>
+          </button>
+          <div class="faq-a">
+            <div class="faq-a-inner">Yes — but only for the host. Guests don't need Spotify at all, premium or otherwise.</div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            Can guests join from outside my home network?
+            <span class="faq-arrow">▾</span>
+          </button>
+          <div class="faq-a">
+            <div class="faq-a-inner">Yes. When you start a party, Spartify automatically generates a public link your guests can open from anywhere — a different Wi-Fi, mobile data, across town. No router settings, no port forwarding.</div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            How do I stop random people from joining?
+            <span class="faq-arrow">▾</span>
+          </button>
+          <div class="faq-a">
+            <div class="faq-a-inner">Open party settings (the gear icon) and set a join password. Guests will be prompted for it before they can enter. You can also set max queue size and per-guest request limits to keep things under control.</div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            Does Spartify store any of my data?
+            <span class="faq-arrow">▾</span>
+          </button>
+          <div class="faq-a">
+            <div class="faq-a-inner">No. Everything stays on your device. No data is ever sent to us. When the party ends, it's gone — queue, guests, history, all of it.</div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            Why use this over Spotify Jams?
+            <span class="faq-arrow">▾</span>
+          </button>
+          <div class="faq-a">
+            <div class="faq-a-inner">Spotify Jams give every participant equal control. Spartify is designed for hosted events — you stay in full control of playback, you can set request limits, block explicit tracks, password-protect entry, and cap the queue size. Plus your guests don't need Spotify accounts at all.</div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            What platforms does Spartify support?
+            <span class="faq-arrow">▾</span>
+          </button>
+          <div class="faq-a">
+            <div class="faq-a-inner">Spartify is built with Tauri, which supports macOS, Windows, and Linux. Builds for all platforms are available on the GitHub releases page.</div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            How do I update Spartify?
+            <span class="faq-arrow">▾</span>
+          </button>
+          <div class="faq-a">
+            <div class="faq-a-inner">Spartify checks for updates automatically on launch. If a new version is available you'll see an update banner at the top of the window. Click Update to download and install it — no manual downloads needed.</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── DOWNLOAD ────────────────────────────── -->
+  <section id="download">
+    <div class="download-orb"></div>
+    <div class="download-inner">
+      <div class="hero-badge" style="display:inline-flex; margin-bottom:24px;">
+        <div class="hero-badge-dot"></div>
+        Free forever
+      </div>
+      <h2 class="download-headline reveal">
+        Ready to throw<br>a better party?
+      </h2>
+      <p class="download-sub reveal">
+        Download Spartify and start your first party in under a minute.
+        Your guests will thank you.
+      </p>
+      <div class="download-actions reveal">
+        <a href="https://github.com/uhteddy/spartify/releases/latest" class="btn btn-green btn-lg download-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download Spartify
+        </a>
+        <a href="https://github.com/uhteddy/spartify" class="btn btn-ghost btn-lg">
+          View Source
+        </a>
+      </div>
+      <p class="download-note reveal">macOS · Windows · Linux · Free · Open Source under MIT</p>
+      <p class="download-note reveal" id="release-info" style="margin-top:6px; display:none;"></p>
+    </div>
+  </section>
+
+  <!-- ─── FOOTER ──────────────────────────────── -->
+  <footer>
+    <div class="footer-inner">
+      <a class="footer-logo" href="#">
+        <div class="nav-logo-icon" style="width:24px;height:24px;border-radius:6px;">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="7" fill="#000"/>
+            <path d="M4 6.5c2.2-.7 4.6-.5 6.6.7M4.5 8.5c1.8-.5 3.8-.4 5.4.6M5 10.5c1.4-.4 2.9-.3 4.2.4" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        Spartify
+      </a>
+      <ul class="footer-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#how">How It Works</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="https://github.com/uhteddy/spartify">GitHub</a></li>
+        <li><a href="https://github.com/uhteddy/spartify/releases/latest" class="download-btn">Download</a></li>
+      </ul>
+      <p class="footer-copy">Built with ♥ · MIT License</p>
+    </div>
+  </footer>
+
+  <!-- ─── DOWNLOAD MODAL ──────────────────────── -->
+  <div class="modal-backdrop" id="download-modal" onclick="closeModalOnBackdrop(event)">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal()" aria-label="Close">✕</button>
+      <div class="modal-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#faaf00" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div class="modal-title" id="modal-title">One quick thing before you open it</div>
+      <p class="modal-sub" id="modal-sub"></p>
+      <div class="modal-steps" id="modal-steps"></div>
+      <div class="modal-actions">
+        <a href="#" class="btn btn-green" id="modal-download-btn" onclick="closeModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download anyway
+        </a>
+        <button class="btn btn-ghost" onclick="closeModal()">Got it</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ─── Phone bottom nav tabs ───────────────
+    function switchPTab(name) {
+      document.querySelectorAll('.p-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.p-tab-content').forEach(c => c.classList.remove('active'));
+      document.querySelector(`.p-tab[data-ptab="${name}"]`).classList.add('active');
+      document.getElementById('ptab-' + name).classList.add('active');
+    }
+
+    // ─── Animated progress bar ───────────────
+    let progress = 42;
+    let playing = true;
+    setInterval(() => {
+      if (!playing) return;
+      progress = Math.min(100, progress + 0.05);
+      if (progress >= 100) progress = 0;
+      const fill = document.getElementById('phone-progress');
+      if (fill) fill.style.width = progress + '%';
+    }, 100);
+
+    // ─── Phone vote buttons (chevrons) ───────
+    function pVote(btn, dir) {
+      const ctrl = btn.closest('.p-vote-ctrl');
+      const countEl = ctrl.querySelector('.p-vote-count');
+      const upBtn = ctrl.querySelector('.p-vote-btn:first-child');
+      const downBtn = ctrl.querySelector('.p-vote-btn:last-child');
+      let count = parseInt(countEl.textContent.replace('+', '')) || 0;
+      if (dir === 1) {
+        const wasVoted = upBtn.classList.contains('voted-up');
+        upBtn.classList.toggle('voted-up');
+        downBtn.classList.remove('voted-down');
+        count += wasVoted ? -1 : 1;
+      } else {
+        const wasVoted = downBtn.classList.contains('voted-down');
+        downBtn.classList.toggle('voted-down');
+        upBtn.classList.remove('voted-up');
+        count += wasVoted ? 1 : -1;
+      }
+      countEl.textContent = count > 0 ? '+' + count : String(count);
+      countEl.className = 'p-vote-count' + (count > 0 ? ' pos' : '');
+    }
+
+    // ─── Phone add song ───────────────────────
+    function pAdd(btn) {
+      if (btn.classList.contains('added')) return;
+      btn.classList.add('added');
+      const svg = btn.querySelector('svg');
+      svg.innerHTML = '<polyline points="20 6 9 17 4 12"/>';
+      setTimeout(() => {
+        btn.classList.remove('added');
+        svg.innerHTML = '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>';
+      }, 1800);
+    }
+
+    // ─── Play/pause toggle ───────────────────
+    function togglePlay() {
+      playing = !playing;
+      const icon = document.getElementById('mac-play-icon');
+      if (playing) {
+        icon.innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+      } else {
+        icon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
+      }
+    }
+
+    // ─── Start Party demo ────────────────────
+    function runPartyDemo() {
+      const btn = document.getElementById('start-party-btn');
+      btn.disabled = true;
+      btn.textContent = 'Starting…';
+
+      const reveal = document.getElementById('demo-url-reveal');
+      reveal.classList.add('visible');
+
+      const urlText = document.getElementById('demo-url-text');
+      const fullUrl = 'zx4qw8.spartify.app';
+      urlText.textContent = '';
+      let i = 0;
+
+      function typeChar() {
+        if (i < fullUrl.length) {
+          urlText.textContent += fullUrl[i];
+          i++;
+          setTimeout(typeChar, 55);
+        } else {
+          setTimeout(() => {
+            document.getElementById('demo-guests-notif').classList.add('show');
+            btn.disabled = false;
+            btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Start a New Party';
+          }, 400);
+        }
+      }
+      setTimeout(typeChar, 200);
+    }
+
+    // ─── FAQ accordion ───────────────────────
+    function toggleFaq(btn) {
+      const item = btn.closest('.faq-item');
+      const answer = item.querySelector('.faq-a');
+      const isOpen = item.classList.contains('open');
+
+      // Close all
+      document.querySelectorAll('.faq-item.open').forEach(i => {
+        i.classList.remove('open');
+        i.querySelector('.faq-a').style.maxHeight = '0';
+      });
+
+      if (!isOpen) {
+        item.classList.add('open');
+        answer.style.maxHeight = answer.scrollHeight + 'px';
+      }
+    }
+
+    // ─── Scroll reveals ───────────────────────
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    // ─── Download modal ──────────────────────────
+    const platformInstructions = {
+      mac: {
+        sub: 'Spartify isn\'t signed with an Apple certificate yet, so macOS will warn you when you first open it. It\'s safe — here\'s how to get past the prompt:',
+        steps: [
+          { text: 'Open your <strong>Downloads</strong> folder and locate the <strong>.dmg</strong> file.' },
+          { text: '<strong>Right-click</strong> (or Control-click) the file and choose <strong>Open</strong> — do not double-click.' },
+          { text: 'A dialog will appear saying the app is from an unidentified developer. Click <strong>Open</strong> to confirm.' },
+          { text: 'If you already double-clicked and were blocked, go to <strong>System Settings → Privacy & Security</strong> and click <strong>Open Anyway</strong>.' },
+        ]
+      },
+      win: {
+        sub: 'Spartify isn\'t signed with a Windows certificate yet, so SmartScreen may flag it when you run the installer. It\'s safe — here\'s how to get past the warning:',
+        steps: [
+          { text: 'Run the downloaded installer. When Windows SmartScreen appears, click <strong>More info</strong>.' },
+          { text: 'A <strong>Run anyway</strong> button will appear at the bottom — click it.' },
+          { text: 'The installer will proceed normally from there.' },
+        ]
+      },
+      linux: {
+        sub: 'Before you can run Spartify on Linux, you\'ll need to mark the downloaded file as executable:',
+        steps: [
+          { text: 'Open a terminal and navigate to where you downloaded the file.' },
+          { text: 'Run: <strong>chmod +x Spartify_*.AppImage</strong> (adjust the filename if needed).' },
+          { text: 'Then run it: <strong>./Spartify_*.AppImage</strong> — or double-click it in your file manager.' },
+        ]
+      }
+    };
+
+    function detectPlatform() {
+      const ua = navigator.userAgent.toLowerCase();
+      if (/mac/.test(ua)) return 'mac';
+      if (/win/.test(ua)) return 'win';
+      return 'linux';
+    }
+
+    function openModal(downloadHref) {
+      const platform = detectPlatform();
+      const info = platformInstructions[platform];
+
+      document.getElementById('modal-sub').innerHTML = info.sub;
+
+      const stepsEl = document.getElementById('modal-steps');
+      stepsEl.innerHTML = info.steps.map((s, i) => `
+        <div class="modal-step">
+          <div class="modal-step-num">${i + 1}</div>
+          <div class="modal-step-text">${s.text}</div>
+        </div>
+      `).join('');
+
+      const dlBtn = document.getElementById('modal-download-btn');
+      dlBtn.href = downloadHref;
+
+      document.getElementById('download-modal').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      document.getElementById('download-modal').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    function closeModalOnBackdrop(e) {
+      if (e.target === document.getElementById('download-modal')) closeModal();
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    // Intercept all download button clicks
+    document.querySelectorAll('.download-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.preventDefault();
+        openModal(btn.href);
+      });
+    });
+
+    // ─── Fetch latest GitHub release ─────────────
+    (async function fetchLatestRelease() {
+      try {
+        const res = await fetch('https://api.github.com/repos/uhteddy/spartify/releases/latest');
+        if (!res.ok) return;
+        const release = await res.json();
+        const assets = release.assets || [];
+
+        // Detect platform
+        const ua = navigator.userAgent.toLowerCase();
+        const isMac = /mac/.test(ua);
+        const isWin = /win/.test(ua);
+        // Linux: fallback
+
+        let asset = null;
+        if (isMac) {
+          asset = assets.find(a => a.name.endsWith('.dmg'))
+               || assets.find(a => /mac|darwin/i.test(a.name));
+        } else if (isWin) {
+          asset = assets.find(a => a.name.endsWith('.msi'))
+               || assets.find(a => a.name.endsWith('.exe'))
+               || assets.find(a => /win/i.test(a.name));
+        } else {
+          asset = assets.find(a => a.name.endsWith('.AppImage'))
+               || assets.find(a => a.name.endsWith('.deb'))
+               || assets.find(a => /linux/i.test(a.name));
+        }
+
+        const url = asset ? asset.browser_download_url : release.html_url;
+        const platformLabel = isMac ? 'macOS' : isWin ? 'Windows' : 'Linux';
+
+        // Update all download buttons and re-attach modal interceptor
+        document.querySelectorAll('.download-btn').forEach(btn => {
+          btn.href = url;
+          if (btn.classList.contains('btn-lg')) {
+            const svg = btn.querySelector('svg');
+            btn.textContent = `Download for ${platformLabel}  ${release.tag_name}`;
+            if (svg) btn.prepend(svg);
+          }
+          // Re-attach click handler now that href is resolved
+          btn.addEventListener('click', e => {
+            e.preventDefault();
+            openModal(btn.href);
+          });
+        });
+
+        // Show release info line
+        const infoEl = document.getElementById('release-info');
+        if (infoEl) {
+          const date = new Date(release.published_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+          const size = asset ? ` · ${(asset.size / 1024 / 1024).toFixed(1)} MB` : '';
+          infoEl.textContent = `${release.tag_name} · Released ${date}${size}`;
+          infoEl.style.display = 'block';
+        }
+      } catch (e) {
+        // Silently fall back to the /releases/latest links already set
+      }
+    })();
+
+    // ─── Auto-cycle phone tabs ─────────────────
+    const phoneTabs = ['queue', 'search', 'history'];
+    let currentPTab = 0;
+    setInterval(() => {
+      currentPTab = (currentPTab + 1) % phoneTabs.length;
+      switchPTab(phoneTabs[currentPTab]);
+    }, 4000);
+  </script>
+
+</body>
+</html>
