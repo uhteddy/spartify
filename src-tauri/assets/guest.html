@@ -601,7 +601,22 @@
   const BASE = window.location.origin;
 
   // ── Init ───────────────────────────────────────────────────────────────────
-  window.addEventListener('DOMContentLoaded', () => {
+  window.addEventListener('DOMContentLoaded', async () => {
+    if (guestToken && guestName) {
+      // Validate the saved token — a new party session will have purged it
+      try {
+        const res = await fetch(`${BASE}/api/queue?token=${guestToken}`);
+        if (res.status === 401) {
+          localStorage.removeItem('spartify_token');
+          localStorage.removeItem('spartify_name');
+          guestToken = null;
+          guestName = null;
+        }
+      } catch (_) {
+        // Network error — party may be offline but token could still be valid; keep it
+      }
+    }
+
     if (guestToken && guestName) {
       showMain(guestName);
       connectWS();
