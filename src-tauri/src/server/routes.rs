@@ -52,6 +52,22 @@ fn current_time() -> u64 {
     crate::spotify::auth::current_time_secs()
 }
 
+// ─── GET /api/info ────────────────────────────────────────────────────────────
+
+#[derive(Serialize)]
+pub struct PartyInfo {
+    requires_password: bool,
+}
+
+pub async fn get_info(State(state): State<AppState>) -> Json<PartyInfo> {
+    let settings = state.config.read().await.party_settings.clone();
+    let requires_password = settings
+        .join_password
+        .as_deref()
+        .map_or(false, |p| !p.is_empty());
+    Json(PartyInfo { requires_password })
+}
+
 // ─── GET /api/playback ────────────────────────────────────────────────────────
 
 pub async fn get_playback(

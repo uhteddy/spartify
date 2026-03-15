@@ -498,7 +498,7 @@
     <h2>Join the Party</h2>
     <p>Enter your name to start requesting songs.</p>
     <input type="text" id="name-input" placeholder="Your name" maxlength="32" autocomplete="off" />
-    <input type="password" id="password-input" placeholder="Password (if required)" autocomplete="off" />
+    <input type="password" id="password-input" placeholder="Party password" autocomplete="off" style="display:none" />
     <button class="btn btn-primary" id="join-btn" onclick="joinParty()">Join</button>
     <p id="join-error" style="color:#e74c3c;font-size:0.85rem;display:none;"></p>
   </div>
@@ -642,6 +642,14 @@
         // Network error — party may be offline but token could still be valid; keep it
       }
     }
+
+    // Fetch party info to show/hide password field
+    try {
+      const info = await fetch(`${BASE}/api/info`).then(r => r.json());
+      if (info.requires_password) {
+        document.getElementById('password-input').style.display = '';
+      }
+    } catch (_) {}
 
     if (guestToken && guestName) {
       showMain(guestName);

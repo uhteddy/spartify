@@ -144,6 +144,7 @@ pub async fn start_server(state: AppState) -> anyhow::Result<u16> {
 fn build_router(state: AppState) -> Router {
     Router::new()
         .route("/", get(serve_guest_ui))
+        .route("/api/info", get(routes::get_info))
         .route("/api/join", post(routes::join))
         .route("/api/queue", get(routes::get_queue))
         .route("/api/playback", get(routes::get_playback))
