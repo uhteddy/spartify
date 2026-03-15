@@ -783,18 +783,6 @@
           {#if error}
             <span class="error-inline">{error}</span>
           {/if}
-          <button
-            class="btn-primary"
-            onclick={playNext}
-            disabled={playNextLoading || queue.length === 0}
-          >
-            {#if playNextLoading}
-              <span class="spinner"></span>
-            {:else}
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-              Play Next
-            {/if}
-          </button>
         </div>
       </div>
 
