@@ -35,7 +35,7 @@ pub async fn broadcast_queue_update(state: &AppState) {
     );
 }
 
-async fn broadcast_guests_update(state: &AppState) {
+pub async fn broadcast_guests_update(state: &AppState) {
     let guests = state.guests.read().await;
     let list: Vec<_> = guests.values().cloned().collect();
     drop(guests);
@@ -104,6 +104,7 @@ pub async fn get_queue(
 pub struct JoinBody {
     name: String,
     password: Option<String>,
+    fingerprint: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -119,6 +120,13 @@ pub async fn join(
     let name = body.name.trim().to_string();
     if name.is_empty() || name.len() > 32 {
         return Err((StatusCode::BAD_REQUEST, "Name must be 1–32 characters".into()));
+    }
+
+    // Check ban list
+    if let Some(ref fp) = body.fingerprint {
+        if state.banned_fingerprints.read().await.contains(fp.as_str()) {
+            return Err((StatusCode::FORBIDDEN, "You have been banned from this party".into()));
+        }
     }
 
     // Check password if one is set
@@ -137,6 +145,7 @@ pub async fn join(
         id: guest_id,
         name: name.clone(),
         joined_at: current_time(),
+        fingerprint: body.fingerprint.clone(),
     };
 
     state.guests.write().await.insert(guest_id, session);

@@ -186,6 +186,64 @@ pub async fn get_guests(state: tauri::State<'_, AppState>) -> Result<Vec<GuestSe
     Ok(guests.values().cloned().collect())
 }
 
+/// Removes the guest from the session and sends them a kicked notification.
+#[tauri::command]
+pub async fn kick_guest(
+    guest_id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    let id: uuid::Uuid = guest_id.parse().map_err(|_| "Invalid guest ID".to_string())?;
+    state.guests.write().await.remove(&id);
+    let _ = state.ws_tx.send(
+        serde_json::json!({"type": "kicked", "guest_id": guest_id}).to_string(),
+    );
+    crate::server::routes::broadcast_guests_update(&*state).await;
+    Ok(())
+}
+
+/// Bans the guest's device fingerprint and kicks them immediately.
+#[tauri::command]
+pub async fn ban_guest(
+    guest_id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    let id: uuid::Uuid = guest_id.parse().map_err(|_| "Invalid guest ID".to_string())?;
+    // Grab fingerprint before removing the session.
+    let fingerprint = state
+        .guests
+        .read()
+        .await
+        .get(&id)
+        .and_then(|s| s.fingerprint.clone());
+    if let Some(fp) = fingerprint {
+        state.banned_fingerprints.write().await.insert(fp);
+    }
+    state.guests.write().await.remove(&id);
+    let _ = state.ws_tx.send(
+        serde_json::json!({"type": "kicked", "guest_id": guest_id}).to_string(),
+    );
+    crate::server::routes::broadcast_guests_update(&*state).await;
+    Ok(())
+}
+
+/// Lifts a ban by fingerprint.
+#[tauri::command]
+pub async fn unban_fingerprint(
+    fingerprint: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    state.banned_fingerprints.write().await.remove(&fingerprint);
+    Ok(())
+}
+
+/// Returns all currently banned fingerprints.
+#[tauri::command]
+pub async fn get_banned_fingerprints(
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<String>, String> {
+    Ok(state.banned_fingerprints.read().await.iter().cloned().collect())
+}
+
 // ─── Playback ─────────────────────────────────────────────────────────────────
 
 #[tauri::command]

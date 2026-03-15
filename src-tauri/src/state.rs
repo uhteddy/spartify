@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use tokio::sync::{RwLock, Mutex, broadcast};
@@ -30,6 +30,9 @@ pub struct GuestSession {
     pub id: Uuid,
     pub name: String,
     pub joined_at: u64,
+    /// Browser fingerprint hash, used for ban enforcement.
+    #[serde(default)]
+    pub fingerprint: Option<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -99,6 +102,8 @@ pub struct AppStateInner {
     pub past_tracks: RwLock<Vec<Track>>,
     /// Spotify's upcoming autoplay queue, refreshed every 3 s by the background poller.
     pub spotify_queue_cache: RwLock<Vec<Track>>,
+    /// Fingerprints of banned devices; checked on join.
+    pub banned_fingerprints: RwLock<HashSet<String>>,
 }
 
 #[derive(Clone)]
@@ -123,6 +128,7 @@ impl AppState {
             playback_cache: RwLock::new(None),
             past_tracks: RwLock::new(Vec::new()),
             spotify_queue_cache: RwLock::new(Vec::new()),
+            banned_fingerprints: RwLock::new(HashSet::new()),
         }))
     }
 }

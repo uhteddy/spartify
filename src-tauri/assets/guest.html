@@ -576,10 +576,36 @@
   </div>
 </div>
 
+<!-- Kicked Screen -->
+<div id="kicked-screen" style="display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;padding:24px;gap:24px;text-align:center;">
+  <div class="logo">Spar<span>tify</span></div>
+  <div class="join-card" style="max-width:360px;">
+    <h2>You've been removed</h2>
+    <p style="color:var(--text-muted)">The host removed you from this party.</p>
+  </div>
+</div>
+
 <!-- Toast container -->
 <div class="toast-container" id="toasts"></div>
 
 <script>
+  // ── Device fingerprint ─────────────────────────────────────────────────────
+  function buildFingerprint() {
+    const parts = [
+      navigator.userAgent,
+      navigator.language,
+      screen.width + 'x' + screen.height,
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+      navigator.platform || '',
+    ].join('|');
+    let h = 5381;
+    for (let i = 0; i < parts.length; i++) {
+      h = (Math.imul(h, 33) ^ parts.charCodeAt(i)) >>> 0;
+    }
+    return h.toString(16).padStart(8, '0');
+  }
+  const FINGERPRINT = buildFingerprint();
+
   // ── State ──────────────────────────────────────────────────────────────────
   let guestToken  = localStorage.getItem('spartify_token');
   let guestName   = localStorage.getItem('spartify_name');
@@ -661,13 +687,14 @@
       const res = await fetch(`${BASE}/api/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, password }),
+        body: JSON.stringify({ name, password, fingerprint: FINGERPRINT }),
       });
       if (res.status === 403) {
+        const msg = await res.text();
         const el = document.getElementById('join-error');
-        el.textContent = 'Incorrect password.';
+        el.textContent = msg.includes('banned') ? 'You have been banned from this party.' : 'Incorrect password.';
         el.style.display = 'block';
-        document.getElementById('password-input').focus();
+        if (!msg.includes('banned')) document.getElementById('password-input').focus();
         return;
       }
       if (!res.ok) throw new Error(await res.text());
@@ -723,6 +750,15 @@
         } else if (msg.type === 'spotify_queue_update' && Array.isArray(msg.tracks)) {
           spotifyQueue = msg.tracks;
           renderQueue();
+        } else if (msg.type === 'kicked' && msg.guest_id === guestToken) {
+          ws.onclose = null; // suppress auto-reconnect
+          ws.close();
+          localStorage.removeItem('spartify_token');
+          localStorage.removeItem('spartify_name');
+          guestToken = null;
+          guestName = null;
+          document.getElementById('main-screen').style.display = 'none';
+          document.getElementById('kicked-screen').style.display = 'flex';
         }
       } catch (_) {}
     };

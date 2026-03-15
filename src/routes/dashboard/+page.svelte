@@ -430,6 +430,15 @@
     try { guests = await invoke<Guest[]>('get_guests'); } catch {}
   }
 
+  async function kickGuest(id: string) {
+    try { await invoke('kick_guest', { guestId: id }); } catch {}
+  }
+
+  async function banGuest(id: string, name: string) {
+    if (!confirm(`Ban ${name}? They won't be able to rejoin from the same device.`)) return;
+    try { await invoke('ban_guest', { guestId: id }); } catch {}
+  }
+
   async function refreshPlayback() {
     try {
       const pb = await invoke<PlaybackState | null>('get_playback');
@@ -683,7 +692,11 @@
         {:else}
           <div class="guest-list">
             {#each guests as guest (guest.id)}
-              <div class="guest-chip">{guest.name}</div>
+              <div class="guest-chip">
+                <span class="guest-chip-name">{guest.name}</span>
+                <button class="guest-action-btn" onclick={() => kickGuest(guest.id)} title="Kick">✕</button>
+                <button class="guest-action-btn ban" onclick={() => banGuest(guest.id, guest.name)} title="Ban">⊘</button>
+              </div>
             {/each}
           </div>
         {/if}
@@ -1290,10 +1303,30 @@
   .guest-chip {
     background: #282828;
     border-radius: 20px;
-    padding: 4px 10px;
+    padding: 4px 6px 4px 10px;
     font-size: 0.8rem;
     color: #ccc;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
   }
+
+  .guest-chip-name { line-height: 1.4; }
+
+  .guest-action-btn {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 1px 3px;
+    border-radius: 10px;
+    line-height: 1;
+    transition: color 0.15s, background 0.15s;
+    flex-shrink: 0;
+  }
+  .guest-action-btn:hover { color: #ccc; background: #3a3a3a; }
+  .guest-action-btn.ban:hover { color: #e74c3c; background: rgba(231,76,60,0.15); }
 
   /* Buttons */
   .btn-primary {

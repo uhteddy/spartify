@@ -62,6 +62,10 @@ pub fn run() {
             commands::spotify_skip_next,
             commands::spotify_skip_previous,
             commands::get_spotify_queue,
+            commands::kick_guest,
+            commands::ban_guest,
+            commands::unban_fingerprint,
+            commands::get_banned_fingerprints,
         ])
         .setup(|app| {
             use tauri_plugin_deep_link::DeepLinkExt;
