@@ -281,6 +281,12 @@ pub async fn get_tunnel_url(state: tauri::State<'_, AppState>) -> Result<Option<
 
 // ─── Device / Playback SDK ────────────────────────────────────────────────────
 
+/// Returns the stored Spotify client ID from config (if any), so the setup page can pre-fill it.
+#[tauri::command]
+pub async fn get_stored_client_id(state: tauri::State<'_, AppState>) -> Result<Option<String>, String> {
+    Ok(state.config.read().await.spotify_client_id.clone())
+}
+
 /// Returns the current Spotify access token so the Web Playback SDK can be initialised.
 #[tauri::command]
 pub async fn get_access_token(state: tauri::State<'_, AppState>) -> Result<Option<String>, String> {

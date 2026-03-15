@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invoke } from '@tauri-apps/api/core';
   import { goto } from '$app/navigation';
+  import { onMount } from 'svelte';
 
   let clientId = $state('');
   let step = $state(1); // 1 = instructions, 2 = paste ID, 3 = connecting
@@ -10,6 +11,13 @@
   let callbackError = $state('');
 
   const REDIRECT_URI = 'spartify://callback';
+
+  onMount(async () => {
+    try {
+      const stored = await invoke<string | null>('get_stored_client_id');
+      if (stored) clientId = stored;
+    } catch {}
+  });
 
   async function connect() {
     error = '';
@@ -203,32 +211,35 @@
     justify-content: center;
     padding: 24px;
     background: #121212;
+    background-image: radial-gradient(ellipse 70% 40% at 50% 0%, rgba(29,185,84,0.05) 0%, transparent 100%);
   }
 
   .card {
     width: 100%;
     max-width: 520px;
-    background: #1e1e1e;
-    border-radius: 16px;
+    background: #181818;
+    border-radius: 18px;
     padding: 36px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 22px;
+    border: 1px solid rgba(255,255,255,0.07);
   }
 
   .logo {
-    font-size: 1.8rem;
+    font-size: 1.9rem;
     font-weight: 800;
-    letter-spacing: -0.5px;
-    color: #fff;
+    letter-spacing: -1px;
+    color: #ffffff;
+    font-family: 'Outfit', sans-serif;
   }
 
   .logo span { color: #1db954; }
 
   .tagline {
     color: #b3b3b3;
-    font-size: 0.9rem;
-    margin-top: -12px;
+    font-size: 0.88rem;
+    margin-top: -14px;
   }
 
   /* Steps */
@@ -236,7 +247,7 @@
     display: flex;
     align-items: center;
     gap: 0;
-    margin: 4px 0;
+    margin: 2px 0;
   }
 
   .step {
@@ -247,29 +258,29 @@
   }
 
   .step-dot {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
-    background: #333;
-    color: #666;
+    background: #3e3e3e;
+    color: #6a6a6a;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     font-weight: 700;
     transition: background 0.2s, color 0.2s;
   }
 
   .step.active .step-dot { background: #1db954; color: #000; }
 
-  .step-label { font-size: 0.8rem; color: #b3b3b3; }
-  .step.active .step-label { color: #fff; }
+  .step-label { font-size: 0.8rem; color: #b3b3b3; font-weight: 500; }
+  .step.active .step-label { color: #ffffff; }
 
   .step-line {
     flex: 1;
-    height: 2px;
-    background: #333;
-    margin: 0 8px;
+    height: 1px;
+    background: rgba(255,255,255,0.07);
+    margin: 0 10px;
     transition: background 0.2s;
   }
   .step-line.active { background: #1db954; }
@@ -288,41 +299,43 @@
   }
 
   h2 {
-    font-size: 1.2rem;
+    font-size: 1.15rem;
     font-weight: 700;
-    color: #fff;
+    color: #ffffff;
+    letter-spacing: -0.3px;
   }
 
-  p { color: #b3b3b3; font-size: 0.9rem; line-height: 1.5; }
+  p { color: #b3b3b3; font-size: 0.88rem; line-height: 1.6; }
 
   /* Instructions */
   .instructions {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
     background: #121212;
-    border-radius: 8px;
-    padding: 16px;
+    border-radius: 10px;
+    padding: 18px;
+    border: 1px solid rgba(255,255,255,0.05);
   }
 
   .instruction-step {
     display: flex;
     gap: 12px;
     align-items: flex-start;
-    font-size: 0.88rem;
-    color: #ccc;
-    line-height: 1.5;
+    font-size: 0.875rem;
+    color: #b3b3b3;
+    line-height: 1.55;
   }
 
   .instruction-step .num {
     width: 22px;
     height: 22px;
-    background: #282828;
+    background: #2a2a2a;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 700;
     color: #1db954;
     flex-shrink: 0;
@@ -330,89 +343,95 @@
   }
 
   .code-block {
-    background: #282828;
-    border-radius: 4px;
-    padding: 4px 8px;
-    font-family: monospace;
-    font-size: 0.85rem;
+    background: #2a2a2a;
+    border-radius: 5px;
+    padding: 4px 9px;
+    font-family: 'Menlo', 'Consolas', monospace;
+    font-size: 0.82rem;
     color: #1db954;
     display: inline-block;
-    margin-top: 4px;
+    margin-top: 5px;
   }
 
-  .hint { font-size: 0.78rem; color: #666; }
+  .hint { font-size: 0.78rem; color: #6a6a6a; margin-top: 2px; display: block; }
 
   /* Notice */
   .notice {
     display: flex;
     align-items: center;
-    gap: 8px;
-    background: #282828;
+    gap: 10px;
+    background: rgba(29,185,84,0.06);
+    border: 1px solid rgba(29,185,84,0.15);
     border-radius: 8px;
     padding: 10px 14px;
-    font-size: 0.85rem;
+    font-size: 0.84rem;
     color: #b3b3b3;
   }
 
   /* Field */
   .field { display: flex; flex-direction: column; gap: 6px; }
 
-  label { font-size: 0.85rem; font-weight: 600; color: #ccc; }
+  label { font-size: 0.84rem; font-weight: 600; color: #b3b3b3; }
 
   input[type="text"] {
-    background: #282828;
-    border: 1px solid #333;
+    background: #2a2a2a;
+    border: 1px solid rgba(255,255,255,0.08);
     border-radius: 8px;
-    color: #fff;
+    color: #ffffff;
     font-size: 0.95rem;
     padding: 12px 14px;
     outline: none;
     transition: border-color 0.15s;
-    font-family: monospace;
+    font-family: 'Menlo', 'Consolas', monospace;
+    font-family: inherit;
   }
   input[type="text"]:focus { border-color: #1db954; }
-  input::placeholder { color: #555; }
+  input::placeholder { color: #6a6a6a; }
 
   /* Buttons */
   .btn-primary {
     background: #1db954;
     color: #000;
     border: none;
-    border-radius: 8px;
+    border-radius: 500px;
     padding: 13px 20px;
     font-size: 0.95rem;
     font-weight: 700;
     cursor: pointer;
     width: 100%;
     transition: background 0.15s, opacity 0.15s;
+    font-family: 'Outfit', sans-serif;
+    letter-spacing: -0.2px;
   }
-  .btn-primary:hover { background: #17a349; }
-  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary:hover { background: #179d47; }
+  .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 
   .btn-ghost {
     background: none;
     border: none;
     color: #b3b3b3;
     font-size: 0.875rem;
+    font-family: 'Outfit', sans-serif;
     cursor: pointer;
     padding: 4px 0;
     text-align: left;
     width: fit-content;
+    transition: color 0.15s;
   }
-  .btn-ghost:hover { color: #fff; }
+  .btn-ghost:hover { color: #ffffff; }
 
   .error {
-    background: rgba(231, 76, 60, 0.15);
-    border: 1px solid rgba(231, 76, 60, 0.4);
-    border-radius: 6px;
+    background: rgba(224, 82, 82, 0.1);
+    border: 1px solid rgba(224, 82, 82, 0.3);
+    border-radius: 7px;
     padding: 10px 14px;
-    font-size: 0.85rem;
-    color: #e74c3c;
+    font-size: 0.84rem;
+    color: #e05252;
   }
 
   .fallback-box {
-    background: #282828;
-    border: 1px solid #383838;
+    background: #2a2a2a;
+    border: 1px solid rgba(255,255,255,0.07);
     border-radius: 10px;
     padding: 16px;
     display: flex;
@@ -421,28 +440,29 @@
   }
 
   .fallback-title {
-    font-size: 0.85rem;
+    font-size: 0.84rem;
     font-weight: 600;
-    color: #ccc;
+    color: #b3b3b3;
     margin: 0;
   }
 
   .fallback-hint {
     font-size: 0.8rem;
-    color: #888;
-    line-height: 1.5;
+    color: #b3b3b3;
+    line-height: 1.55;
     margin: 0;
   }
 
   .fallback-hint code {
     color: #1db954;
-    font-family: monospace;
+    font-family: 'Menlo', 'Consolas', monospace;
+    font-size: 0.85em;
   }
 
   .spinner-large {
-    width: 48px;
-    height: 48px;
-    border: 3px solid rgba(255,255,255,0.1);
+    width: 44px;
+    height: 44px;
+    border: 3px solid rgba(255,255,255,0.08);
     border-top-color: #1db954;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;

@@ -51,6 +51,7 @@ pub fn run() {
             commands::submit_oauth_code,
             commands::check_for_updates,
             commands::install_update,
+            commands::get_stored_client_id,
             commands::get_access_token,
             commands::set_sdk_device_id,
             commands::get_devices,

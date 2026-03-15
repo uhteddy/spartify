@@ -4,26 +4,33 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spartify</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     :root {
       --green: #1db954;
-      --green-dark: #17a349;
+      --green-hover: #1ed760;
+      --red: #e91429;
       --bg: #121212;
-      --surface: #1e1e1e;
+      --surface: #181818;
       --surface2: #282828;
+      --surface3: #3e3e3e;
       --text: #ffffff;
       --text-muted: #b3b3b3;
+      --text-faint: #6a6a6a;
+      --radius-pill: 500px;
       --radius: 8px;
+      --radius-sm: 4px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: 'Outfit', -apple-system, sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100dvh;
-      padding-bottom: env(safe-area-inset-bottom);
     }
 
     /* ── Join screen ── */
@@ -35,48 +42,68 @@
       min-height: 100dvh;
       padding: 24px;
       gap: 24px;
+      background: #000;
     }
 
-    .logo { font-size: 2.2rem; font-weight: 800; letter-spacing: -1px; }
+    .logo {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      color: #fff;
+    }
     .logo span { color: var(--green); }
 
     .join-card {
       width: 100%;
-      max-width: 360px;
-      background: var(--surface);
-      border-radius: 12px;
-      padding: 28px;
+      max-width: 340px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 12px;
     }
 
-    .join-card h2 { font-size: 1.25rem; font-weight: 700; }
-    .join-card p { color: var(--text-muted); font-size: 0.9rem; }
+    .join-card h2 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+
+    .join-card > p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      text-align: center;
+      margin-bottom: 8px;
+    }
 
     /* ── Main UI ── */
-    #main-screen { display: none; flex-direction: column; height: 100dvh; }
+    #main-screen {
+      display: none;
+      flex-direction: column;
+      height: 100dvh;
+      overflow: hidden;
+    }
 
     header {
       position: sticky;
       top: 0;
       z-index: 10;
       background: var(--bg);
-      border-bottom: 1px solid var(--surface2);
       padding: 10px 16px;
       display: flex;
       align-items: center;
       gap: 10px;
       flex-shrink: 0;
+      border-bottom: 1px solid #282828;
     }
 
-    header .logo { font-size: 1.3rem; }
+    header .logo { font-size: 1.2rem; letter-spacing: -0.5px; }
 
     .ws-indicator {
-      width: 8px;
-      height: 8px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
-      background: #555;
+      background: var(--text-faint);
       flex-shrink: 0;
     }
     .ws-indicator.connected { background: var(--green); }
@@ -84,33 +111,58 @@
     .guest-badge {
       margin-left: auto;
       background: var(--surface2);
-      border-radius: 20px;
-      padding: 4px 12px;
-      font-size: 0.8rem;
+      border-radius: var(--radius-pill);
+      padding: 4px 14px;
+      font-size: 0.78rem;
       color: var(--text-muted);
+      font-weight: 600;
     }
 
-    /* ── Now Playing bar ── */
+    /* ── Now Playing bar — Spotify mini-player style ── */
     #now-playing-bar {
-      background: var(--surface);
-      border-bottom: 1px solid var(--surface2);
-      padding: 10px 16px;
+      background: #181818;
+      border-bottom: 1px solid #282828;
       display: none;
       flex-direction: column;
-      gap: 8px;
       flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Thin progress strip at the top of the player */
+    #now-playing-bar::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--surface3);
+      z-index: 1;
+    }
+
+    #np-fill-top {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 2px;
+      background: var(--green);
+      z-index: 2;
+      transition: width 0.4s linear;
+      max-width: 100%;
     }
 
     .np-row {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
+      padding: 10px 12px 10px;
     }
 
     .np-art {
-      width: 44px;
-      height: 44px;
-      border-radius: 4px;
+      width: 42px;
+      height: 42px;
+      border-radius: var(--radius-sm);
       object-fit: cover;
       flex-shrink: 0;
       background: var(--surface2);
@@ -119,11 +171,12 @@
     .np-info { flex: 1; min-width: 0; }
 
     .np-title {
-      font-size: 0.9rem;
+      font-size: 0.875rem;
       font-weight: 600;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      color: #fff;
     }
 
     .np-artist {
@@ -132,28 +185,22 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      margin-top: 1px;
     }
 
     .np-right {
       display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 4px;
+      align-items: center;
+      gap: 6px;
       flex-shrink: 0;
     }
 
-    .np-status {
-      font-size: 0.72rem;
-      font-weight: 600;
-      color: var(--green);
-    }
-    .np-status.paused { color: #666; }
+    /* Hide legacy status text — we use top-strip progress now */
+    .np-status { display: none; }
 
     .np-open-btn {
       background: none;
-      border: 1px solid #333;
-      border-radius: 20px;
-      padding: 3px 10px;
+      border: none;
       color: var(--text-muted);
       font-size: 0.72rem;
       cursor: pointer;
@@ -161,129 +208,177 @@
       text-decoration: none;
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      gap: 3px;
+      padding: 6px 10px;
+      border-radius: var(--radius-pill);
+      border: 1px solid #282828;
       transition: border-color 0.15s, color 0.15s;
+      font-family: inherit;
     }
     .np-open-btn:hover { border-color: var(--green); color: var(--green); }
 
-    .np-progress-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    /* Legacy progress row — hidden; we use top strip */
+    .np-progress-row { display: none; }
+    .np-time { display: none; }
+    .np-bar { display: none; }
+    .np-fill { display: none; }
+
+    /* ── Tab content (scrollable) ── */
+    .tab-content {
+      display: none;
+      padding: 12px 16px 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
-
-    .np-time { font-size: 0.7rem; color: #555; flex-shrink: 0; }
-
-    .np-bar {
+    .tab-content.active {
+      display: block;
       flex: 1;
-      height: 3px;
-      background: #333;
-      border-radius: 2px;
-      overflow: hidden;
+      overflow-y: auto;
     }
 
-    .np-fill {
-      height: 100%;
-      background: var(--green);
-      border-radius: 2px;
-      transition: width 0.4s linear;
-      max-width: 100%;
-    }
-
-    /* ── Tabs ── */
+    /* ── Bottom Nav — Spotify style ── */
     .tabs {
       display: flex;
-      border-bottom: 1px solid var(--surface2);
       flex-shrink: 0;
+      background: #000;
+      border-top: 1px solid #282828;
+      padding-bottom: env(safe-area-inset-bottom);
     }
 
     .tab {
       flex: 1;
-      padding: 11px 8px;
-      text-align: center;
-      font-size: 0.85rem;
+      padding: 10px 8px 7px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      font-size: 0.7rem;
       font-weight: 600;
-      color: var(--text-muted);
+      color: var(--text-faint);
       cursor: pointer;
-      border-bottom: 2px solid transparent;
-      transition: color 0.15s, border-color 0.15s;
+      transition: color 0.12s;
+      letter-spacing: 0.01em;
     }
-    .tab.active { color: var(--green); border-bottom-color: var(--green); }
+    .tab.active { color: #fff; }
 
-    .tab-content { display: none; padding: 14px 16px; overflow-y: auto; flex: 1; }
-    .tab-content.active { display: block; }
+    .tab-icon {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+      transition: stroke 0.12s;
+    }
+    .tab.active .tab-icon { stroke: var(--green); }
 
-    /* ── Inputs & buttons ── */
+    /* ── Inputs ── */
     input[type="text"],
     input[type="password"] {
       width: 100%;
       background: var(--surface2);
-      border: 1px solid #333;
+      border: 1px solid transparent;
       border-radius: var(--radius);
       color: var(--text);
-      font-size: 1rem;
-      padding: 12px 14px;
+      font-size: 0.95rem;
+      padding: 14px 16px;
       outline: none;
       transition: border-color 0.15s;
+      font-family: inherit;
     }
     input[type="text"]:focus,
     input[type="password"]:focus { border-color: var(--green); }
     input[type="text"]::placeholder,
-    input[type="password"]::placeholder { color: var(--text-muted); }
+    input[type="password"]::placeholder { color: var(--text-faint); }
 
+    /* ── Buttons ── */
     .btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      padding: 12px 20px;
+      padding: 14px 32px;
       border: none;
-      border-radius: var(--radius);
+      border-radius: var(--radius-pill);
       font-size: 0.95rem;
       font-weight: 700;
       cursor: pointer;
-      transition: opacity 0.15s, transform 0.1s;
+      transition: transform 0.1s, background 0.15s;
+      font-family: inherit;
+      letter-spacing: 0.02em;
     }
     .btn:active { transform: scale(0.97); }
-    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
     .btn-primary { background: var(--green); color: #000; width: 100%; }
-    .btn-primary:hover:not(:disabled) { background: var(--green-dark); }
+    .btn-primary:hover:not(:disabled) { background: var(--green-hover); }
 
     /* ── Search ── */
-    .search-wrap { position: relative; margin-bottom: 12px; }
-    .search-wrap input { padding-right: 40px; }
+    .search-wrap {
+      position: relative;
+      margin-bottom: 8px;
+    }
+
+    /* Pill search input with icon */
+    #search-input {
+      border-radius: var(--radius-pill);
+      background: var(--surface2);
+      padding-left: 44px;
+      padding-right: 40px;
+      border: none;
+    }
+    #search-input:focus { border-color: transparent; outline: 2px solid var(--green); }
+
+    .search-wrap::before {
+      content: '';
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 16px;
+      height: 16px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236a6a6a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-size: contain;
+      pointer-events: none;
+      z-index: 1;
+    }
 
     .clear-btn {
       position: absolute;
-      right: 10px;
+      right: 14px;
       top: 50%;
       transform: translateY(-50%);
       background: none;
       border: none;
       color: var(--text-muted);
       cursor: pointer;
-      font-size: 1.1rem;
+      font-size: 1rem;
       line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    .track-list { display: flex; flex-direction: column; gap: 8px; }
+    /* ── Track list ── */
+    .track-list { display: flex; flex-direction: column; }
 
     .track-card {
-      background: var(--surface);
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 10px 12px;
-      transition: background 0.15s;
+      padding: 6px 8px;
+      transition: background 0.1s;
     }
-    .track-card:hover { background: var(--surface2); }
+    .track-card:hover { background: rgba(255,255,255,0.08); }
 
     .track-art {
-      width: 48px;
-      height: 48px;
-      border-radius: 4px;
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
       object-fit: cover;
       flex-shrink: 0;
       background: var(--surface2);
@@ -292,11 +387,12 @@
     .track-info { flex: 1; min-width: 0; }
 
     .track-title {
-      font-size: 0.92rem;
-      font-weight: 600;
+      font-size: 0.875rem;
+      font-weight: 500;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      color: #fff;
     }
 
     .track-sub {
@@ -305,106 +401,116 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      margin-top: 2px;
     }
 
     .track-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
     .add-btn {
-      background: var(--green);
-      color: #000;
-      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--text-faint);
       border-radius: 50%;
-      width: 32px;
-      height: 32px;
-      font-size: 1.3rem;
+      width: 28px;
+      height: 28px;
+      font-size: 1.1rem;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      transition: background 0.15s, transform 0.1s;
+      transition: border-color 0.15s, color 0.15s, transform 0.1s;
+      font-weight: 400;
+      line-height: 1;
     }
-    .add-btn:hover { background: var(--green-dark); }
+    .add-btn:hover:not(:disabled) { border-color: #fff; color: #fff; }
     .add-btn:active { transform: scale(0.9); }
-    .add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .add-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* Checkmark state */
+    .add-btn[disabled] { border-color: var(--green); color: var(--green); opacity: 1; }
 
     .open-spotify-btn {
       background: none;
-      border: 1px solid #333;
+      border: none;
       border-radius: 50%;
-      width: 32px;
-      height: 32px;
+      width: 28px;
+      height: 28px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--text-muted);
-      font-size: 0.8rem;
+      color: var(--text-faint);
+      font-size: 0.75rem;
       text-decoration: none;
       flex-shrink: 0;
-      transition: border-color 0.15s, color 0.15s;
+      transition: color 0.15s;
     }
-    .open-spotify-btn:hover { border-color: var(--green); color: var(--green); }
+    .open-spotify-btn:hover { color: #fff; }
 
     /* ── Queue ── */
     .queue-item {
-      background: var(--surface);
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 10px 12px;
-      margin-bottom: 8px;
+      gap: 10px;
+      padding: 6px 8px;
+      margin-bottom: 0;
+      transition: background 0.1s;
     }
+    .queue-item:hover { background: rgba(255,255,255,0.08); }
 
     .queue-pos {
-      width: 24px;
+      width: 18px;
       text-align: center;
-      font-size: 0.85rem;
-      color: var(--text-muted);
+      font-size: 0.8rem;
+      color: var(--text-faint);
       flex-shrink: 0;
-      font-weight: 700;
+      font-weight: 400;
+      font-variant-numeric: tabular-nums;
     }
 
     .vote-ctrl {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 2px;
+      gap: 0;
       flex-shrink: 0;
     }
 
     .vote-btn {
       background: none;
       border: none;
-      color: var(--text-muted);
+      color: var(--text-faint);
       cursor: pointer;
-      font-size: 1rem;
+      font-size: 0.78rem;
       padding: 2px 4px;
-      border-radius: 4px;
+      border-radius: 3px;
       line-height: 1;
-      transition: color 0.15s, background 0.15s;
+      transition: color 0.1s;
     }
-    .vote-btn:hover { color: var(--green); background: rgba(29,185,84,0.1); }
+    .vote-btn:hover { color: var(--text-muted); }
     .vote-btn.voted-up { color: var(--green); }
-    .vote-btn.voted-down { color: #e74c3c; }
+    .vote-btn.voted-down { color: var(--red); }
 
     .vote-count {
-      font-size: 0.8rem;
-      font-weight: 700;
-      min-width: 20px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      min-width: 18px;
       text-align: center;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
     }
 
     .spotify-autoplay-divider {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin: 16px 0 10px;
-      color: var(--text-muted);
-      font-size: 0.75rem;
-      font-weight: 600;
-      letter-spacing: 0.06em;
+      gap: 10px;
+      margin: 16px 0 8px;
+      color: var(--text-faint);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
     }
     .spotify-autoplay-divider::before,
@@ -412,42 +518,50 @@
       content: '';
       flex: 1;
       height: 1px;
-      background: var(--border);
+      background: #282828;
     }
+
     .autoplay-item {
-      background: var(--surface);
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 10px 12px;
-      margin-bottom: 8px;
-      opacity: 0.5;
+      padding: 6px 8px;
+      opacity: 0.4;
     }
 
     /* ── History ── */
     .history-item {
-      background: var(--surface);
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 10px 12px;
-      margin-bottom: 8px;
-      opacity: 0.75;
+      padding: 6px 8px;
+      transition: background 0.1s;
     }
+    .history-item:hover { background: rgba(255,255,255,0.06); }
 
     /* ── Misc ── */
     .empty-state {
       text-align: center;
-      padding: 40px 20px;
+      padding: 48px 20px;
       color: var(--text-muted);
     }
-    .empty-state .icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .empty-state .icon {
+      font-size: 2rem;
+      margin-bottom: 12px;
+      display: block;
+      opacity: 0.5;
+    }
+    .empty-state p {
+      font-size: 0.875rem;
+      line-height: 1.5;
+      color: var(--text-muted);
+    }
 
     .toast-container {
       position: fixed;
-      bottom: calc(16px + env(safe-area-inset-bottom));
+      bottom: calc(62px + env(safe-area-inset-bottom));
       left: 50%;
       transform: translateX(-50%);
       z-index: 100;
@@ -459,34 +573,58 @@
     }
 
     .toast {
-      background: var(--surface2);
-      color: var(--text);
-      border-radius: 20px;
+      background: var(--surface3);
+      color: #fff;
+      border-radius: var(--radius-pill);
       padding: 10px 20px;
       font-size: 0.875rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-      animation: toast-in 0.25s ease;
-      max-width: 300px;
+      font-family: inherit;
+      font-weight: 500;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+      animation: toast-in 0.2s ease;
+      max-width: 280px;
       text-align: center;
     }
-    .toast.error { background: #c0392b; }
-    .toast.success { background: var(--green); color: #000; }
+    .toast.error { background: #3a0a0a; color: #ff8080; }
+    .toast.success { background: var(--green); color: #000; font-weight: 700; }
 
     @keyframes toast-in {
-      from { opacity: 0; transform: translateY(12px); }
+      from { opacity: 0; transform: translateY(6px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
     .spinner {
       display: inline-block;
-      width: 20px;
-      height: 20px;
-      border: 2px solid rgba(255,255,255,0.2);
-      border-top-color: var(--green);
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.15);
+      border-top-color: currentColor;
       border-radius: 50%;
       animation: spin 0.7s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    #kicked-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      padding: 24px;
+      gap: 24px;
+      text-align: center;
+      background: #000;
+    }
+
+    /* Section label above track lists */
+    .section-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-faint);
+      padding: 12px 8px 8px;
+    }
   </style>
 </head>
 <body>
@@ -496,11 +634,11 @@
   <div class="logo">Spar<span>tify</span></div>
   <div class="join-card">
     <h2>Join the Party</h2>
-    <p>Enter your name to start requesting songs.</p>
+    <p>Enter your name to request songs.</p>
     <input type="text" id="name-input" placeholder="Your name" maxlength="32" autocomplete="off" />
     <input type="password" id="password-input" placeholder="Party password" autocomplete="off" style="display:none" />
     <button class="btn btn-primary" id="join-btn" onclick="joinParty()">Join</button>
-    <p id="join-error" style="color:#e74c3c;font-size:0.85rem;display:none;"></p>
+    <p id="join-error" style="color:var(--red);font-size:0.85rem;display:none;text-align:center;"></p>
   </div>
 </div>
 
@@ -512,8 +650,9 @@
     <div class="guest-badge" id="guest-name-badge"></div>
   </header>
 
-  <!-- Now Playing bar (visible when something is playing) -->
+  <!-- Now Playing mini-player -->
   <div id="now-playing-bar">
+    <div id="np-fill-top" style="width:0%"></div>
     <div class="np-row">
       <img class="np-art" id="np-art" src="" alt="" onerror="this.style.visibility='hidden'" />
       <div class="np-info">
@@ -522,16 +661,17 @@
       </div>
       <div class="np-right">
         <div class="np-status" id="np-status">▶ Playing</div>
-        <div id="np-vote-ctrl" style="display:none;align-items:center;gap:4px;margin-top:2px;">
-          <button class="vote-btn" id="np-vote-down" onclick="castCurrentVote('down')" title="Skip vote">▼</button>
+        <div id="np-vote-ctrl" style="display:none;align-items:center;gap:4px;">
+          <button class="vote-btn" id="np-vote-down" onclick="castCurrentVote('down')" title="Downvote">▼</button>
           <span class="vote-count" id="np-vote-count" style="min-width:18px;text-align:center;font-size:0.75rem;">0</span>
-          <button class="vote-btn" id="np-vote-up" onclick="castCurrentVote('up')" title="Good song">▲</button>
+          <button class="vote-btn" id="np-vote-up" onclick="castCurrentVote('up')" title="Upvote">▲</button>
         </div>
         <a class="np-open-btn" id="np-open-btn" href="#" target="_blank" rel="noopener">
           Open ↗
         </a>
       </div>
     </div>
+    <!-- Legacy progress row — hidden, replaced by top strip -->
     <div class="np-progress-row">
       <span class="np-time" id="np-elapsed">0:00</span>
       <div class="np-bar"><div class="np-fill" id="np-fill" style="width:0%"></div></div>
@@ -539,23 +679,17 @@
     </div>
   </div>
 
-  <div class="tabs">
-    <div class="tab active" onclick="switchTab('search')">Search</div>
-    <div class="tab" onclick="switchTab('queue')">Queue <span id="queue-badge"></span></div>
-    <div class="tab" onclick="switchTab('history')">History</div>
-  </div>
-
   <!-- Search tab -->
   <div class="tab-content active" id="tab-search">
     <div class="search-wrap">
-      <input type="text" id="search-input" placeholder="Search for a song..." autocomplete="off"
+      <input type="text" id="search-input" placeholder="Songs, artists, albums…" autocomplete="off"
              oninput="onSearchInput()" />
       <button class="clear-btn" onclick="clearSearch()" id="clear-btn" style="display:none">✕</button>
     </div>
     <div id="search-results">
       <div class="empty-state">
-        <div class="icon">🎵</div>
-        <p>Search for a song to add to the queue</p>
+        <span class="icon">🎵</span>
+        <p>What do you want to hear?</p>
       </div>
     </div>
   </div>
@@ -564,7 +698,7 @@
   <div class="tab-content" id="tab-queue">
     <div id="queue-list">
       <div class="empty-state">
-        <div class="icon">🎶</div>
+        <span class="icon">🎶</span>
         <p>The queue is empty. Be the first to add a song!</p>
       </div>
     </div>
@@ -574,19 +708,48 @@
   <div class="tab-content" id="tab-history">
     <div id="history-list">
       <div class="empty-state">
-        <div class="icon">🕐</div>
-        <p>No tracks have been played yet</p>
+        <span class="icon">🕐</span>
+        <p>No tracks played yet</p>
       </div>
+    </div>
+  </div>
+
+  <!-- Bottom navigation -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('search')">
+      <svg class="tab-icon" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8"/>
+        <path d="m21 21-4.35-4.35"/>
+      </svg>
+      Search
+    </div>
+    <div class="tab" onclick="switchTab('queue')">
+      <svg class="tab-icon" viewBox="0 0 24 24">
+        <line x1="8" y1="6" x2="21" y2="6"/>
+        <line x1="8" y1="12" x2="21" y2="12"/>
+        <line x1="8" y1="18" x2="21" y2="18"/>
+        <line x1="3" y1="6" x2="3.01" y2="6"/>
+        <line x1="3" y1="12" x2="3.01" y2="12"/>
+        <line x1="3" y1="18" x2="3.01" y2="18"/>
+      </svg>
+      Queue <span id="queue-badge"></span>
+    </div>
+    <div class="tab" onclick="switchTab('history')">
+      <svg class="tab-icon" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </svg>
+      History
     </div>
   </div>
 </div>
 
 <!-- Kicked Screen -->
-<div id="kicked-screen" style="display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;padding:24px;gap:24px;text-align:center;">
+<div id="kicked-screen">
   <div class="logo">Spar<span>tify</span></div>
-  <div class="join-card" style="max-width:360px;">
+  <div class="join-card" style="max-width:320px;">
     <h2>You've been removed</h2>
-    <p style="color:var(--text-muted)">The host removed you from this party.</p>
+    <p>The host removed you from this party.</p>
   </div>
 </div>
 
@@ -635,7 +798,6 @@
   // ── Init ───────────────────────────────────────────────────────────────────
   window.addEventListener('DOMContentLoaded', async () => {
     if (guestToken && guestName) {
-      // Validate the saved token — a new party session will have purged it
       try {
         const res = await fetch(`${BASE}/api/queue?token=${guestToken}`);
         if (res.status === 401) {
@@ -644,12 +806,9 @@
           guestToken = null;
           guestName = null;
         }
-      } catch (_) {
-        // Network error — party may be offline but token could still be valid; keep it
-      }
+      } catch (_) {}
     }
 
-    // Fetch party info to show/hide password field and configure features
     try {
       const info = await fetch(`${BASE}/api/info`).then(r => r.json());
       if (info.requires_password) {
@@ -676,14 +835,20 @@
       if (e.key === 'Enter') doSearch();
     });
 
-    // Progress interpolation tick
+    // Progress interpolation tick — updates the top strip
     progressTick = setInterval(() => {
       if (!pbIsPlaying || pbDurationMs <= 0) return;
       const elapsed = pbProgressMs + (Date.now() - pbSyncedAt);
       const clamped = Math.min(elapsed, pbDurationMs);
-      document.getElementById('np-elapsed').textContent = fmtDuration(clamped);
+      // Update legacy hidden elements (for applyPlayback compatibility)
+      const legacyEl = document.getElementById('np-elapsed');
+      if (legacyEl) legacyEl.textContent = fmtDuration(clamped);
       const pct = (clamped / pbDurationMs) * 100;
-      document.getElementById('np-fill').style.width = pct + '%';
+      const legacyFill = document.getElementById('np-fill');
+      if (legacyFill) legacyFill.style.width = pct + '%';
+      // Update top strip
+      const topFill = document.getElementById('np-fill-top');
+      if (topFill) topFill.style.width = pct + '%';
     }, 500);
   });
 
@@ -766,7 +931,7 @@
           spotifyQueue = msg.tracks;
           renderQueue();
         } else if (msg.type === 'kicked' && msg.guest_id === guestToken) {
-          ws.onclose = null; // suppress auto-reconnect
+          ws.onclose = null;
           ws.close();
           localStorage.removeItem('spartify_token');
           localStorage.removeItem('spartify_name');
@@ -792,7 +957,6 @@
       const pb = await res.json();
       applyPlayback(pb);
     } catch (_) {}
-    // Poll every 5s as fallback (WS pushes updates too)
     setTimeout(fetchPlayback, 5000);
   }
 
@@ -831,7 +995,6 @@
       openBtn.style.display = 'none';
     }
 
-    // Show/refresh skip-vote control
     const voteCtrl = document.getElementById('np-vote-ctrl');
     if (autoSkipEnabled && pb.track_id) {
       voteCtrl.style.display = 'flex';
@@ -840,9 +1003,11 @@
       voteCtrl.style.display = 'none';
     }
 
-    document.getElementById('np-duration').textContent = fmtDuration(pbDurationMs);
+    // Update progress (legacy + top strip)
     const pct = pbDurationMs > 0 ? (pbProgressMs / pbDurationMs) * 100 : 0;
     document.getElementById('np-fill').style.width = pct + '%';
+    document.getElementById('np-fill-top').style.width = pct + '%';
+    document.getElementById('np-duration').textContent = fmtDuration(pbDurationMs);
     document.getElementById('np-elapsed').textContent = fmtDuration(pbProgressMs);
   }
 
@@ -859,10 +1024,11 @@
   function renderHistory() {
     const container = document.getElementById('history-list');
     if (!history.length) {
-      container.innerHTML = '<div class="empty-state"><div class="icon">🕐</div><p>No tracks have been played yet</p></div>';
+      container.innerHTML = '<div class="empty-state"><span class="icon">🕐</span><p>No tracks played yet</p></div>';
       return;
     }
-    container.innerHTML = history.map(track => `
+    container.innerHTML = '<div class="section-label">Recently Played</div>' +
+      history.map(track => `
       <div class="history-item">
         <img class="track-art" src="${track.album_art_url || ''}" alt="" onerror="this.style.display='none'" />
         <div class="track-info">
@@ -899,7 +1065,7 @@
     document.getElementById('search-input').value = '';
     document.getElementById('clear-btn').style.display = 'none';
     document.getElementById('search-results').innerHTML = `
-      <div class="empty-state"><div class="icon">🎵</div><p>Search for a song to add to the queue</p></div>`;
+      <div class="empty-state"><span class="icon">🎵</span><p>What do you want to hear?</p></div>`;
   }
 
   async function doSearch() {
@@ -915,18 +1081,18 @@
       const tracks = await res.json();
       renderSearchResults(tracks);
     } catch (err) {
-      container.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>${err.message}</p></div>`;
+      container.innerHTML = `<div class="empty-state"><span class="icon">⚠️</span><p>${err.message}</p></div>`;
     }
   }
 
   function renderSearchResults(tracks) {
     const container = document.getElementById('search-results');
     if (!tracks.length) {
-      container.innerHTML = '<div class="empty-state"><div class="icon">😕</div><p>No results found</p></div>';
+      container.innerHTML = '<div class="empty-state"><span class="icon">😕</span><p>No results found</p></div>';
       return;
     }
     const inQueue = new Set(queue.map(e => e.track.id));
-    container.innerHTML = '<div class="track-list">' +
+    container.innerHTML = '<div class="section-label">Songs</div><div class="track-list">' +
       tracks.map(track => {
         const already = inQueue.has(track.id);
         return `
@@ -951,7 +1117,7 @@
 
   async function addToQueue(trackId, btn) {
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner" style="width:16px;height:16px;border-width:2px"></span>';
+    btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px"></span>';
 
     try {
       const res = await fetch(`${BASE}/api/request`, {
@@ -983,12 +1149,12 @@
     badge.textContent = queue.length ? `(${queue.length})` : '';
 
     const container = document.getElementById('queue-list');
-
     let html = '';
 
     if (!queue.length) {
-      html += '<div class="empty-state"><div class="icon">🎶</div><p>The queue is empty. Be the first to add a song!</p></div>';
+      html += '<div class="empty-state"><span class="icon">🎶</span><p>The queue is empty. Be the first to add a song!</p></div>';
     } else {
+      html += '<div class="section-label">Next Up</div>';
       html += queue.map((entry, i) => {
         const myVote = myVotes[entry.track.id];
         return `
@@ -1002,7 +1168,7 @@
           <div class="vote-ctrl">
             <button class="vote-btn ${myVote === 'up' ? 'voted-up' : ''}"
                     onclick="castVote('${entry.track.id}', 'up')">▲</button>
-            <div class="vote-count" style="color:${entry.votes > 0 ? '#1db954' : entry.votes < 0 ? '#e74c3c' : '#b3b3b3'}">
+            <div class="vote-count" style="color:${entry.votes > 0 ? '#1db954' : entry.votes < 0 ? '#e91429' : 'var(--text-faint)'}">
               ${entry.votes > 0 ? '+' : ''}${entry.votes}
             </div>
             <button class="vote-btn ${myVote === 'down' ? 'voted-down' : ''}"
@@ -1015,7 +1181,7 @@
     const partyIds = new Set(queue.map(e => e.track.id));
     const filteredAutoplay = spotifyQueue.filter(t => !partyIds.has(t.id));
     if (filteredAutoplay.length > 0) {
-      html += `<div class="spotify-autoplay-divider">Spotify Autoplay</div>`;
+      html += `<div class="spotify-autoplay-divider">Autoplay</div>`;
       html += filteredAutoplay.slice(0, 10).map(track => `
         <div class="autoplay-item">
           <img class="track-art" src="${track.album_art_url || ''}" alt="" onerror="this.style.display='none'" />

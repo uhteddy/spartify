@@ -8,14 +8,14 @@
   :global(*) { box-sizing: border-box; margin: 0; padding: 0; }
 
   :global(body) {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-family: 'Outfit', -apple-system, sans-serif;
     background: #121212;
-    color: #fff;
+    color: #ffffff;
     overflow: hidden;
   }
 
-  :global(::-webkit-scrollbar) { width: 6px; }
+  :global(::-webkit-scrollbar) { width: 5px; }
   :global(::-webkit-scrollbar-track) { background: transparent; }
-  :global(::-webkit-scrollbar-thumb) { background: #333; border-radius: 3px; }
-  :global(::-webkit-scrollbar-thumb:hover) { background: #555; }
+  :global(::-webkit-scrollbar-thumb) { background: #2c2c2c; border-radius: 3px; }
+  :global(::-webkit-scrollbar-thumb:hover) { background: #3a3a3a; }
 </style>
