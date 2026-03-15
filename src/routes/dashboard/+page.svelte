@@ -558,7 +558,9 @@
       <button class="update-btn" onclick={installUpdate} disabled={updateInstalling}>
         {updateInstalling ? 'Installing…' : 'Install & Restart'}
       </button>
-      <button class="update-dismiss" onclick={() => updateVersion = null} aria-label="Dismiss">✕</button>
+      <button class="update-dismiss" onclick={() => updateVersion = null} aria-label="Dismiss">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
   {/if}
 
@@ -569,9 +571,17 @@
         <div class="logo">Spar<span>tify</span></div>
         <div class="sidebar-actions">
           <button class="gear-btn" onclick={checkForUpdates} disabled={checkingUpdate} title={noUpdateToast ? 'Up to date!' : 'Check for updates'}>
-            {checkingUpdate ? '…' : noUpdateToast ? '✓' : '↑'}
+            {#if checkingUpdate}
+              <span class="spin-icon"></span>
+            {:else if noUpdateToast}
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            {:else}
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>
+            {/if}
           </button>
-          <button class="gear-btn" onclick={() => { showSettings = !showSettings; confirmingStop = false; }} title="Party settings">⚙</button>
+          <button class="gear-btn" onclick={() => { showSettings = !showSettings; confirmingStop = false; }} title="Party settings">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.57 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+          </button>
         </div>
       </div>
 
@@ -585,7 +595,7 @@
             {#if loading}
               <span class="spinner"></span> Starting…
             {:else}
-              🎉 Start Party
+              Start Party
             {/if}
           </button>
         </div>
@@ -597,7 +607,9 @@
           {/if}
           <div class="url-row">
             <span class="url-text" title={tunnelUrl}>{tunnelUrl}</span>
-            <button class="icon-btn" onclick={copyUrl} title="Copy URL">⎘</button>
+            <button class="icon-btn" onclick={copyUrl} title="Copy URL">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
           </div>
           <p class="hint">Guests scan this QR or open the URL to join.</p>
         </div>
@@ -611,7 +623,7 @@
             </div>
           </div>
         {:else}
-          <button class="btn-stop" onclick={stopParty}>■ Stop Party</button>
+          <button class="btn-stop" onclick={stopParty}>End Party</button>
         {/if}
       {/if}
 
@@ -629,9 +641,12 @@
               <div class="np-track">{nowPlayingTrack ?? '—'}</div>
               <div class="np-artist">{nowPlayingArtist ?? ''}</div>
               {#if isPlaying}
-                <div class="playing-badge">▶ Playing</div>
+                <div class="playing-badge">
+                  <span class="eq-bars"><span class="eq-bar"></span><span class="eq-bar"></span><span class="eq-bar"></span></span>
+                  Playing
+                </div>
               {:else}
-                <div class="playing-badge paused">⏸ Paused</div>
+                <div class="playing-badge paused">Paused</div>
               {/if}
             </div>
           </div>
@@ -649,13 +664,21 @@
 
           <!-- Playback controls -->
           <div class="pb-controls">
-            <button class="pb-btn" onclick={() => playbackControl('spotify_skip_previous')} disabled={controlLoading} title="Previous">⏮</button>
+            <button class="pb-btn" onclick={() => playbackControl('spotify_skip_previous')} disabled={controlLoading} title="Previous">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+            </button>
             {#if isPlaying}
-              <button class="pb-btn pb-btn-main" onclick={() => playbackControl('spotify_pause')} disabled={controlLoading} title="Pause">⏸</button>
+              <button class="pb-btn pb-btn-main" onclick={() => playbackControl('spotify_pause')} disabled={controlLoading} title="Pause">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+              </button>
             {:else}
-              <button class="pb-btn pb-btn-main" onclick={() => playbackControl('spotify_play')} disabled={controlLoading} title="Play">▶</button>
+              <button class="pb-btn pb-btn-main" onclick={() => playbackControl('spotify_play')} disabled={controlLoading} title="Play">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              </button>
             {/if}
-            <button class="pb-btn" onclick={() => playbackControl('spotify_skip_next')} disabled={controlLoading} title="Skip">⏭</button>
+            <button class="pb-btn" onclick={() => playbackControl('spotify_skip_next')} disabled={controlLoading} title="Next">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zm2.5-6 5.5 3.9V8.1L8.5 12zM16 6h2v12h-2z"/></svg>
+            </button>
           </div>
         </div>
       {:else}
@@ -668,9 +691,17 @@
       <!-- Device picker -->
       <div class="device-picker-wrapper">
         <button class="device-btn" onclick={(e) => { e.stopPropagation(); toggleDevicePicker(); }}>
-          <span class="device-icon">🔊</span>
+          <span class="device-icon">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+          </span>
           <span class="device-name">{activeDeviceName}</span>
-          <span class="device-chevron">{showDevicePicker ? '▲' : '▼'}</span>
+          <span class="device-chevron">
+            {#if showDevicePicker}
+              <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+            {:else}
+              <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            {/if}
+          </span>
         </button>
 
         {#if showDevicePicker}
@@ -728,8 +759,12 @@
             {#each guests as guest (guest.id)}
               <div class="guest-chip">
                 <span class="guest-chip-name">{guest.name}</span>
-                <button class="guest-action-btn" onclick={() => kickGuest(guest.id)} title="Kick">✕</button>
-                <button class="guest-action-btn ban" onclick={() => banGuest(guest.id, guest.name)} title="Ban">⊘</button>
+                <button class="guest-action-btn" onclick={() => kickGuest(guest.id)} title="Remove">
+                  <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+                <button class="guest-action-btn ban" onclick={() => banGuest(guest.id, guest.name)} title="Ban">
+                  <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                </button>
               </div>
             {/each}
           </div>
@@ -753,7 +788,12 @@
             onclick={playNext}
             disabled={playNextLoading || queue.length === 0}
           >
-            {playNextLoading ? '…' : '▶ Play Next'}
+            {#if playNextLoading}
+              <span class="spinner"></span>
+            {:else}
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              Play Next
+            {/if}
           </button>
         </div>
       </div>
@@ -761,7 +801,9 @@
       <div class="queue-list">
         {#if queue.length === 0}
           <div class="empty-queue">
-            <div class="empty-icon">🎵</div>
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            </div>
             {#if partyActive}
               <p>Waiting for guests to add songs…</p>
               <p class="hint">Share the QR code to get the party started!</p>
@@ -803,7 +845,9 @@
                 class="remove-btn"
                 onclick={() => removeTrack(entry.track.id)}
                 title="Remove from queue"
-              >✕</button>
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
             </div>
           {/each}
         {/if}
@@ -837,7 +881,9 @@
       <div class="settings-panel">
         <div class="settings-header">
           <h2>Party Settings</h2>
-          <button class="settings-close" onclick={() => showSettings = false}>✕</button>
+          <button class="settings-close" onclick={() => showSettings = false}>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
 
         <div class="settings-body">
@@ -1018,11 +1064,13 @@
     border: none;
     color: #6a6a6a;
     cursor: pointer;
-    font-size: 0.85rem;
-    padding: 2px 6px;
+    padding: 5px;
     border-radius: 4px;
     flex-shrink: 0;
     transition: color 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .update-dismiss:hover { color: #ffffff; }
 
@@ -1078,12 +1126,15 @@
     background: none;
     border: none;
     color: #6a6a6a;
-    font-size: 1rem;
     cursor: pointer;
-    padding: 5px 7px;
+    padding: 6px;
     border-radius: 6px;
     transition: color 0.15s, background 0.15s;
-    font-family: 'Outfit', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
   }
   .gear-btn:hover { color: #b3b3b3; background: #2a2a2a; }
   .gear-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -1150,11 +1201,13 @@
     border: none;
     color: #b3b3b3;
     cursor: pointer;
-    font-size: 0.95rem;
-    padding: 2px 4px;
+    padding: 4px;
     border-radius: 4px;
     flex-shrink: 0;
     transition: color 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .icon-btn:hover { color: #ffffff; }
 
@@ -1227,8 +1280,43 @@
     font-weight: 700;
     letter-spacing: 0.04em;
     margin-top: 3px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
   }
   .playing-badge.paused { color: #6a6a6a; }
+
+  /* Animated equalizer bars */
+  .eq-bars {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 11px;
+  }
+  .eq-bar {
+    width: 3px;
+    background: #1db954;
+    border-radius: 1px;
+    animation: eq-bounce 0.9s ease-in-out infinite;
+  }
+  .eq-bar:nth-child(1) { height: 5px; animation-delay: 0s; }
+  .eq-bar:nth-child(2) { height: 9px; animation-delay: 0.22s; }
+  .eq-bar:nth-child(3) { height: 4px; animation-delay: 0.44s; }
+  @keyframes eq-bounce {
+    0%, 100% { transform: scaleY(0.45); }
+    50% { transform: scaleY(1); }
+  }
+
+  /* Inline spin icon for gear button */
+  .spin-icon {
+    width: 13px;
+    height: 13px;
+    border: 2px solid rgba(255,255,255,0.15);
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
 
   /* Progress bar */
   .progress-bar-wrapper {
@@ -1266,35 +1354,38 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 12px;
   }
 
   .pb-btn {
-    background: #3e3e3e;
+    background: none;
     border: none;
     color: #b3b3b3;
     border-radius: 50%;
-    width: 34px;
-    height: 34px;
-    font-size: 0.85rem;
+    width: 32px;
+    height: 32px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.15s, color 0.15s;
+    transition: color 0.15s, transform 0.1s;
     flex-shrink: 0;
+    padding: 0;
   }
-  .pb-btn:hover:not(:disabled) { background: #4a4a4a; color: #ffffff; }
-  .pb-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .pb-btn:hover:not(:disabled) { color: #ffffff; transform: scale(1.08); }
+  .pb-btn:disabled { opacity: 0.25; cursor: not-allowed; }
 
   .pb-btn-main {
-    width: 42px;
-    height: 42px;
-    font-size: 1rem;
-    background: #1db954;
+    width: 44px;
+    height: 44px;
+    background: #ffffff;
     color: #000;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: background 0.15s, transform 0.1s;
   }
-  .pb-btn-main:hover:not(:disabled) { background: #179d47; color: #000; }
+  .pb-btn-main:hover:not(:disabled) { background: #f0f0f0; transform: scale(1.05); }
+  .pb-btn-main:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
   /* Device picker */
   .device-picker-wrapper {
@@ -1319,7 +1410,7 @@
   }
   .device-btn:hover { border-color: rgba(255,255,255,0.15); color: #b3b3b3; }
 
-  .device-icon { font-size: 0.88rem; flex-shrink: 0; }
+  .device-icon { display: flex; align-items: center; flex-shrink: 0; }
 
   .device-name {
     flex: 1;
@@ -1328,7 +1419,7 @@
     text-overflow: ellipsis;
   }
 
-  .device-chevron { font-size: 0.58rem; color: #6a6a6a; flex-shrink: 0; }
+  .device-chevron { display: flex; align-items: center; color: #6a6a6a; flex-shrink: 0; }
 
   .device-dropdown {
     position: absolute;
@@ -1429,12 +1520,14 @@
     border: none;
     color: #6a6a6a;
     cursor: pointer;
-    font-size: 0.72rem;
-    padding: 1px 3px;
-    border-radius: 8px;
+    padding: 3px;
+    border-radius: 6px;
     line-height: 1;
     transition: color 0.15s, background 0.15s;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .guest-action-btn:hover { color: #b3b3b3; background: #3e3e3e; }
   .guest-action-btn.ban:hover { color: #e05252; background: rgba(224,82,82,0.12); }
@@ -1543,7 +1636,7 @@
     padding: 40px;
   }
 
-  .empty-icon { font-size: 2.5rem; margin-bottom: 6px; opacity: 0.6; }
+  .empty-icon { margin-bottom: 10px; opacity: 0.45; color: #6a6a6a; display: flex; align-items: center; justify-content: center; }
 
   /* Queue list */
   .queue-list {
@@ -1663,11 +1756,13 @@
     border: none;
     color: #3e3e3e;
     cursor: pointer;
-    font-size: 0.88rem;
-    padding: 4px 6px;
+    padding: 5px;
     border-radius: 5px;
     flex-shrink: 0;
     transition: color 0.15s, background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .remove-btn:hover { color: #e05252; background: rgba(224,82,82,0.08); }
 
@@ -1778,12 +1873,13 @@
     background: none;
     border: none;
     color: #6a6a6a;
-    font-size: 1rem;
     cursor: pointer;
-    padding: 4px 8px;
+    padding: 6px;
     border-radius: 5px;
     transition: color 0.15s, background 0.15s;
-    font-family: 'Outfit', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .settings-close:hover { color: #ffffff; background: #3e3e3e; }
 

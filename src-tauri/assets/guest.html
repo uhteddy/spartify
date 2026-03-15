@@ -41,8 +41,9 @@
       justify-content: center;
       min-height: 100dvh;
       padding: 24px;
-      gap: 24px;
+      gap: 28px;
       background: #000;
+      background-image: radial-gradient(ellipse 90% 55% at 50% 0%, rgba(29,185,84,0.13) 0%, transparent 65%);
     }
 
     .logo {
@@ -88,13 +89,15 @@
       position: sticky;
       top: 0;
       z-index: 10;
-      background: var(--bg);
+      background: rgba(18,18,18,0.96);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       padding: 10px 16px;
       display: flex;
       align-items: center;
       gap: 10px;
       flex-shrink: 0;
-      border-bottom: 1px solid #282828;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
     }
 
     header .logo { font-size: 1.2rem; letter-spacing: -0.5px; }
@@ -203,17 +206,19 @@
       border: none;
       color: var(--text-muted);
       font-size: 0.72rem;
+      font-weight: 600;
       cursor: pointer;
       white-space: nowrap;
       text-decoration: none;
       display: inline-flex;
       align-items: center;
-      gap: 3px;
+      gap: 5px;
       padding: 6px 10px;
       border-radius: var(--radius-pill);
-      border: 1px solid #282828;
+      border: 1px solid rgba(255,255,255,0.1);
       transition: border-color 0.15s, color 0.15s;
       font-family: inherit;
+      letter-spacing: 0.01em;
     }
     .np-open-btn:hover { border-color: var(--green); color: var(--green); }
 
@@ -240,8 +245,10 @@
     .tabs {
       display: flex;
       flex-shrink: 0;
-      background: #000;
-      border-top: 1px solid #282828;
+      background: rgba(0,0,0,0.96);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-top: 1px solid rgba(255,255,255,0.07);
       padding-bottom: env(safe-area-inset-bottom);
     }
 
@@ -411,17 +418,15 @@
       color: var(--text-muted);
       border: 1px solid var(--text-faint);
       border-radius: 50%;
-      width: 28px;
-      height: 28px;
-      font-size: 1.1rem;
+      width: 30px;
+      height: 30px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
       transition: border-color 0.15s, color 0.15s, transform 0.1s;
-      font-weight: 400;
-      line-height: 1;
+      padding: 0;
     }
     .add-btn:hover:not(:disabled) { border-color: #fff; color: #fff; }
     .add-btn:active { transform: scale(0.9); }
@@ -441,10 +446,10 @@
       align-items: center;
       justify-content: center;
       color: var(--text-faint);
-      font-size: 0.75rem;
       text-decoration: none;
       flex-shrink: 0;
       transition: color 0.15s;
+      padding: 0;
     }
     .open-spotify-btn:hover { color: #fff; }
 
@@ -483,11 +488,13 @@
       border: none;
       color: var(--text-faint);
       cursor: pointer;
-      font-size: 0.78rem;
-      padding: 2px 4px;
+      padding: 3px 4px;
       border-radius: 3px;
       line-height: 1;
       transition: color 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .vote-btn:hover { color: var(--text-muted); }
     .vote-btn.voted-up { color: var(--green); }
@@ -548,10 +555,12 @@
       color: var(--text-muted);
     }
     .empty-state .icon {
-      font-size: 2rem;
-      margin-bottom: 12px;
-      display: block;
-      opacity: 0.5;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.4;
+      color: var(--text-muted);
     }
     .empty-state p {
       font-size: 0.875rem;
@@ -614,6 +623,7 @@
       gap: 24px;
       text-align: center;
       background: #000;
+      background-image: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(233,20,41,0.07) 0%, transparent 60%);
     }
 
     /* Section label above track lists */
@@ -662,12 +672,17 @@
       <div class="np-right">
         <div class="np-status" id="np-status">▶ Playing</div>
         <div id="np-vote-ctrl" style="display:none;align-items:center;gap:4px;">
-          <button class="vote-btn" id="np-vote-down" onclick="castCurrentVote('down')" title="Downvote">▼</button>
+          <button class="vote-btn" id="np-vote-down" onclick="castCurrentVote('down')" title="Downvote">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
           <span class="vote-count" id="np-vote-count" style="min-width:18px;text-align:center;font-size:0.75rem;">0</span>
-          <button class="vote-btn" id="np-vote-up" onclick="castCurrentVote('up')" title="Upvote">▲</button>
+          <button class="vote-btn" id="np-vote-up" onclick="castCurrentVote('up')" title="Upvote">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+          </button>
         </div>
         <a class="np-open-btn" id="np-open-btn" href="#" target="_blank" rel="noopener">
-          Open ↗
+          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Open
         </a>
       </div>
     </div>
@@ -684,11 +699,13 @@
     <div class="search-wrap">
       <input type="text" id="search-input" placeholder="Songs, artists, albums…" autocomplete="off"
              oninput="onSearchInput()" />
-      <button class="clear-btn" onclick="clearSearch()" id="clear-btn" style="display:none">✕</button>
+      <button class="clear-btn" onclick="clearSearch()" id="clear-btn" style="display:none">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
     <div id="search-results">
       <div class="empty-state">
-        <span class="icon">🎵</span>
+        <span class="icon"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span>
         <p>What do you want to hear?</p>
       </div>
     </div>
@@ -698,7 +715,7 @@
   <div class="tab-content" id="tab-queue">
     <div id="queue-list">
       <div class="empty-state">
-        <span class="icon">🎶</span>
+        <span class="icon"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>
         <p>The queue is empty. Be the first to add a song!</p>
       </div>
     </div>
@@ -708,7 +725,7 @@
   <div class="tab-content" id="tab-history">
     <div id="history-list">
       <div class="empty-state">
-        <span class="icon">🕐</span>
+        <span class="icon"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
         <p>No tracks played yet</p>
       </div>
     </div>
@@ -1024,7 +1041,7 @@
   function renderHistory() {
     const container = document.getElementById('history-list');
     if (!history.length) {
-      container.innerHTML = '<div class="empty-state"><span class="icon">🕐</span><p>No tracks played yet</p></div>';
+      container.innerHTML = '<div class="empty-state"><span class="icon"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span><p>No tracks played yet</p></div>';
       return;
     }
     container.innerHTML = '<div class="section-label">Recently Played</div>' +
@@ -1036,7 +1053,9 @@
           <div class="track-sub">${esc(track.artist)} · ${esc(track.album)}</div>
         </div>
         <a class="open-spotify-btn" href="https://open.spotify.com/track/${track.id}"
-           target="_blank" rel="noopener" title="Open in Spotify">↗</a>
+           target="_blank" rel="noopener" title="Open in Spotify">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </a>
       </div>`).join('');
   }
 
@@ -1065,7 +1084,7 @@
     document.getElementById('search-input').value = '';
     document.getElementById('clear-btn').style.display = 'none';
     document.getElementById('search-results').innerHTML = `
-      <div class="empty-state"><span class="icon">🎵</span><p>What do you want to hear?</p></div>`;
+      <div class="empty-state"><span class="icon"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span><p>What do you want to hear?</p></div>`;
   }
 
   async function doSearch() {
@@ -1081,14 +1100,20 @@
       const tracks = await res.json();
       renderSearchResults(tracks);
     } catch (err) {
-      container.innerHTML = `<div class="empty-state"><span class="icon">⚠️</span><p>${err.message}</p></div>`;
+      container.innerHTML = `<div class="empty-state"><span class="icon"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span><p>${err.message}</p></div>`;
     }
   }
+
+  const SVG_PLUS = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+  const SVG_CHECK = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+  const SVG_EXTERNAL = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
+  const SVG_CHEVRON_UP = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>';
+  const SVG_CHEVRON_DOWN = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
 
   function renderSearchResults(tracks) {
     const container = document.getElementById('search-results');
     if (!tracks.length) {
-      container.innerHTML = '<div class="empty-state"><span class="icon">😕</span><p>No results found</p></div>';
+      container.innerHTML = '<div class="empty-state"><span class="icon"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><line x1="8" y1="11" x2="14" y2="11"/></svg></span><p>No results found</p></div>';
       return;
     }
     const inQueue = new Set(queue.map(e => e.track.id));
@@ -1104,10 +1129,10 @@
           </div>
           <div class="track-actions">
             <a class="open-spotify-btn" href="https://open.spotify.com/track/${track.id}"
-               target="_blank" rel="noopener" title="Open in Spotify">↗</a>
+               target="_blank" rel="noopener" title="Open in Spotify">${SVG_EXTERNAL}</a>
             <button class="add-btn" ${already ? 'disabled title="Already in queue"' : ''}
                     onclick="addToQueue('${track.id}', this)">
-              ${already ? '✓' : '+'}
+              ${already ? SVG_CHECK : SVG_PLUS}
             </button>
           </div>
         </div>`;
@@ -1129,16 +1154,16 @@
         const msg = await res.text();
         toast(msg || 'Cannot add this track', 'error');
         btn.disabled = false;
-        btn.innerHTML = '+';
+        btn.innerHTML = SVG_PLUS;
         return;
       }
       if (!res.ok) throw new Error(await res.text());
-      btn.innerHTML = '✓';
+      btn.innerHTML = SVG_CHECK;
       toast('Added to queue!', 'success');
       switchTab('queue');
     } catch (err) {
       btn.disabled = false;
-      btn.innerHTML = '+';
+      btn.innerHTML = SVG_PLUS;
       toast('Error: ' + err.message, 'error');
     }
   }
@@ -1152,7 +1177,7 @@
     let html = '';
 
     if (!queue.length) {
-      html += '<div class="empty-state"><span class="icon">🎶</span><p>The queue is empty. Be the first to add a song!</p></div>';
+      html += '<div class="empty-state"><span class="icon"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><p>The queue is empty. Be the first to add a song!</p></div>';
     } else {
       html += '<div class="section-label">Next Up</div>';
       html += queue.map((entry, i) => {
@@ -1167,12 +1192,12 @@
           </div>
           <div class="vote-ctrl">
             <button class="vote-btn ${myVote === 'up' ? 'voted-up' : ''}"
-                    onclick="castVote('${entry.track.id}', 'up')">▲</button>
+                    onclick="castVote('${entry.track.id}', 'up')">${SVG_CHEVRON_UP}</button>
             <div class="vote-count" style="color:${entry.votes > 0 ? '#1db954' : entry.votes < 0 ? '#e91429' : 'var(--text-faint)'}">
               ${entry.votes > 0 ? '+' : ''}${entry.votes}
             </div>
             <button class="vote-btn ${myVote === 'down' ? 'voted-down' : ''}"
-                    onclick="castVote('${entry.track.id}', 'down')">▼</button>
+                    onclick="castVote('${entry.track.id}', 'down')">${SVG_CHEVRON_DOWN}</button>
           </div>
         </div>`;
       }).join('');

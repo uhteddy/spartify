@@ -128,7 +128,9 @@
         </div>
 
         <div class="notice">
-          <span class="notice-icon">⭐</span>
+          <span class="notice-icon">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="#1db954"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+          </span>
           <span>Spotify Premium is required to control playback.</span>
         </div>
 
@@ -366,6 +368,12 @@
     padding: 10px 14px;
     font-size: 0.84rem;
     color: #b3b3b3;
+  }
+
+  .notice-icon {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
   }
 
   /* Field */
